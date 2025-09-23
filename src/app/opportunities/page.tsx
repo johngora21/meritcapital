@@ -144,6 +144,62 @@ export default function OpportunitiesPage() {
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedType, setSelectedType] = React.useState("");
   const [selectedOpportunity, setSelectedOpportunity] = React.useState<Opportunity | null>(null);
+  const [showAddModal, setShowAddModal] = React.useState(false);
+  const [newOpportunity, setNewOpportunity] = React.useState({
+    title: '',
+    company: '',
+    description: '',
+    location: '',
+    type: 'Funding Round' as const,
+    industry: [] as string[],
+    deadline: '',
+    amount: '',
+    stage: '',
+    equity: '',
+    tags: [] as string[],
+    investors: [] as string[],
+    image: ''
+  });
+  const [newTag, setNewTag] = React.useState('');
+  const [newInvestor, setNewInvestor] = React.useState('');
+  const [showIndustryDropdown, setShowIndustryDropdown] = React.useState(false);
+
+  const addTag = () => {
+    if (newTag.trim() && !newOpportunity.tags.includes(newTag.trim())) {
+      setNewOpportunity({...newOpportunity, tags: [...newOpportunity.tags, newTag.trim()]});
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setNewOpportunity({...newOpportunity, tags: newOpportunity.tags.filter(tag => tag !== tagToRemove)});
+  };
+
+  const addInvestor = () => {
+    if (newInvestor.trim() && !newOpportunity.investors.includes(newInvestor.trim())) {
+      setNewOpportunity({...newOpportunity, investors: [...newOpportunity.investors, newInvestor.trim()]});
+      setNewInvestor('');
+    }
+  };
+
+  const removeInvestor = (investorToRemove: string) => {
+    setNewOpportunity({...newOpportunity, investors: newOpportunity.investors.filter(investor => investor !== investorToRemove)});
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.opp-dropdown-container')) {
+        setShowIndustryDropdown(false);
+      }
+    };
+
+    if (showIndustryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showIndustryDropdown]);
 
   const filtered = opportunities.filter((opp) => {
     const matchesQuery = opp.title.toLowerCase().includes(query.toLowerCase()) || 
@@ -178,8 +234,289 @@ export default function OpportunitiesPage() {
     });
   };
 
+  const handleAddOpportunity = async () => {
+    try {
+      const opportunityData = {
+        ...newOpportunity,
+        postedDate: new Date().toISOString().split('T')[0],
+        image: newOpportunity.image || "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80&auto=format&fit=crop",
+        status: "Open" as const
+      };
+
+      const response = await fetch('/api/v1/opportunities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(opportunityData)
+      });
+
+      if (response.ok) {
+        setShowAddModal(false);
+        setNewOpportunity({
+          title: '',
+          company: '',
+          description: '',
+          location: '',
+          type: 'Funding Round' as const,
+          industry: [],
+          deadline: '',
+          amount: '',
+          stage: '',
+          equity: '',
+          tags: [],
+          investors: [],
+          image: ''
+        });
+        setNewTag('');
+        setNewInvestor('');
+        // Refresh the page or update the opportunities list
+        window.location.reload();
+      } else {
+        console.error('Failed to add opportunity');
+      }
+    } catch (error) {
+      console.error('Error adding opportunity:', error);
+    }
+  };
+
   return (
-    <div className="opp-wrap">
+    <>
+      <style jsx>{`
+        .opp-wrap { display: grid; gap: 24px; padding: 24px; }
+        
+        .opp-head { 
+          display: flex; flex-direction: column; gap: 8px;
+          padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; 
+        }
+        .opp-head h2 { margin: 0; font-size: 28px; font-weight: 800; color: #111827; }
+        .opp-head p { margin: 0; color: #6b7280; font-size: 14px; }
+        
+        .opp-toolbar { 
+          display: flex; justify-content: space-between; align-items: center; 
+          gap: 16px; flex-wrap: wrap; 
+        }
+        .opp-filters { display: flex; gap: 12px; flex-wrap: wrap; }
+        
+        .opp-search, .opp-industry-filter, .opp-type-filter {
+          padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+          font-size: 14px; background: white; min-width: 150px;
+        }
+        .opp-search:focus, .opp-industry-filter:focus, .opp-type-filter:focus {
+          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .opp-add-btn {
+          padding: 10px 20px; background: #3b82f6; color: white; border: none;
+          border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: background-color 0.2s;
+        }
+        .opp-add-btn:hover { background: #2563eb; }
+        
+        .opp-grid { 
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+          gap: 20px; 
+        }
+        
+        .opp-card { 
+          background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+          overflow: hidden; cursor: pointer; transition: all 0.2s;
+        }
+        .opp-card:hover { 
+          border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+        
+        .opp-card-header { position: relative; height: 120px; overflow: hidden; }
+        .opp-image { width: 100%; height: 100%; }
+        .opp-image img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .opp-card-body { padding: 16px; }
+        .opp-card-title { 
+          font-size: 16px; font-weight: 700; color: #111827; 
+          margin: 0 0 4px; line-height: 1.3;
+        }
+        .opp-card-company { 
+          color: #6b7280; font-size: 14px; margin: 0 0 8px; 
+        }
+        .opp-card-description { 
+          color: #4b5563; font-size: 13px; line-height: 1.4; 
+          margin: 0 0 12px; display: -webkit-box; -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical; overflow: hidden;
+        }
+        
+        .opp-card-meta { 
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 12px; font-size: 12px; color: #6b7280;
+        }
+        .opp-card-location { display: flex; align-items: center; gap: 4px; }
+        .opp-card-deadline { display: flex; align-items: center; gap: 4px; }
+        
+        .opp-card-footer { 
+          display: flex; justify-content: space-between; align-items: center;
+          padding-top: 12px; border-top: 1px solid #f3f4f6;
+        }
+        .opp-card-amount { 
+          font-weight: 700; color: #059669; font-size: 14px; 
+        }
+        .opp-card-stage { 
+          background: #f3f4f6; color: #374151; padding: 4px 8px;
+          border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        
+        .opp-modal-overlay { 
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.8); z-index: 1000;
+          display: flex; align-items: center; justify-content: center;
+          padding: 20px;
+        }
+        
+        .opp-modal { 
+          background: white; border-radius: 12px; max-width: 600px; 
+          width: 100%; max-height: 80vh; overflow: hidden;
+          position: relative;
+        }
+        
+        .opp-modal-close { 
+          position: absolute; top: 16px; right: 16px; z-index: 10;
+          background: rgba(0,0,0,0.5); color: white; border: none;
+          width: 32px; height: 32px; border-radius: 50%; font-size: 18px;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .opp-modal-close:hover { background: rgba(0,0,0,0.7); }
+        
+        .opp-modal-content { padding: 16px; }
+        .opp-modal-header { margin-bottom: 8px; }
+        .opp-modal-header h2 { 
+          margin: 0; font-size: 18px; font-weight: 600; color: #1f2937; 
+        }
+        
+        .opp-modal-body { margin-bottom: 16px; }
+        .opp-form { display: flex; flex-direction: column; gap: 16px; }
+        .opp-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .opp-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .opp-form-group label { 
+          font-weight: 600; color: #374151; font-size: 14px; 
+        }
+        .opp-form-group input, .opp-form-group select, .opp-form-group textarea {
+          padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+          font-size: 14px; background: white; transition: border-color 0.2s;
+        }
+        .opp-form-group input:focus, .opp-form-group select:focus, .opp-form-group textarea:focus {
+          outline: none; border-color: var(--mc-sidebar-bg); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+        .opp-form-group textarea { resize: vertical; min-height: 80px; }
+        
+        .opp-modal-footer { 
+          display: flex; justify-content: flex-end; gap: 12px;
+          padding-top: 20px; border-top: 1px solid #e5e7eb;
+        }
+        .opp-modal-btn { 
+          padding: 10px 20px; border-radius: 8px; font-weight: 600; 
+          cursor: pointer; font-size: 14px; transition: all 0.2s;
+        }
+        .opp-modal-btn--secondary { 
+          background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+        }
+        .opp-modal-btn--secondary:hover { background: #e5e7eb; }
+        .opp-modal-btn--primary { 
+          background: var(--mc-sidebar-bg); color: white; border: none;
+        }
+        .opp-modal-btn--primary:hover { 
+          background: var(--mc-sidebar-bg-hover); transform: translateY(-1px); 
+        }
+        
+        .opp-tag-input-group, .opp-investor-input-group {
+          display: flex; gap: 8px; margin-bottom: 8px;
+        }
+        .opp-tag-input-group input, .opp-investor-input-group input {
+          flex: 1; margin-bottom: 0;
+        }
+        .opp-add-tag-btn, .opp-add-investor-btn {
+          padding: 10px 16px; background: #10b981; color: white; border: none;
+          border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: background-color 0.2s; white-space: nowrap;
+        }
+        .opp-add-tag-btn:hover, .opp-add-investor-btn:hover {
+          background: #059669;
+        }
+        
+        .opp-tags-display, .opp-investors-display {
+          display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+        }
+        .opp-tag-item, .opp-investor-item {
+          display: inline-flex; align-items: center; gap: 4px;
+          background: #f3f4f6; color: #374151; padding: 4px 8px;
+          border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        .opp-remove-tag, .opp-remove-investor {
+          background: none; border: none; color: #6b7280; cursor: pointer;
+          font-size: 16px; line-height: 1; padding: 0; margin-left: 4px;
+        }
+        .opp-remove-tag:hover, .opp-remove-investor:hover {
+          color: #ef4444;
+        }
+        
+        .opp-image-preview {
+          margin-top: 8px;
+        }
+        .opp-preview-img {
+          width: 100px; height: 100px; object-fit: cover; 
+          border-radius: 8px; border: 1px solid #d1d5db;
+        }
+        
+        .opp-dropdown-container {
+          position: relative; width: 100%;
+        }
+        .opp-dropdown-trigger {
+          width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; 
+          border-radius: 8px; background: white; cursor: pointer;
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 14px; color: #374151; transition: border-color 0.2s;
+        }
+        .opp-dropdown-trigger:hover {
+          border-color: #3b82f6;
+        }
+        .opp-dropdown-trigger:focus {
+          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .opp-dropdown-arrow {
+          font-size: 12px; color: #6b7280; transition: transform 0.2s;
+        }
+        .opp-dropdown-menu {
+          position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+          background: white; border: 1px solid #d1d5db; border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); max-height: 200px;
+          overflow-y: auto; margin-top: 4px;
+        }
+        .opp-dropdown-item {
+          display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+          cursor: pointer; transition: background-color 0.2s;
+        }
+        .opp-dropdown-item:hover {
+          background: #f8fafc;
+        }
+        .opp-dropdown-item input[type="checkbox"] {
+          margin: 0; cursor: pointer; width: 16px; height: 16px;
+          accent-color: #3b82f6;
+        }
+        .opp-dropdown-item span {
+          font-size: 14px; color: #374151; cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+          .opp-toolbar { flex-direction: column; align-items: stretch; }
+          .opp-filters { justify-content: stretch; }
+          .opp-search, .opp-industry-filter, .opp-type-filter { min-width: auto; }
+          .opp-grid { grid-template-columns: 1fr; }
+          .opp-form-row { grid-template-columns: 1fr; }
+          .opp-industry-checkboxes { grid-template-columns: repeat(2, 1fr); }
+          .opp-modal { margin: 10px; max-height: calc(100vh - 20px); }
+        }
+      `}</style>
+      
+      <div className="opp-wrap">
       <div className="opp-head">
         <h2>Opportunities</h2>
         <p>Discover exciting career opportunities and partnerships</p>
@@ -218,6 +555,12 @@ export default function OpportunitiesPage() {
             <option value="Mature">Mature</option>
           </select>
         </div>
+        <button 
+          className="proj-add-btn"
+          onClick={() => setShowAddModal(true)}
+        >
+          <span>+</span> Add Opportunity
+        </button>
       </div>
 
       <div className="opp-grid">
@@ -351,7 +694,268 @@ export default function OpportunitiesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Opportunity Modal */}
+      {showAddModal && (
+        <div className="opp-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="opp-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="opp-modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            <div className="opp-modal-content">
+              <div className="opp-modal-header">
+                <h2>Add New Opportunity</h2>
+              </div>
+              
+              <div className="opp-modal-body">
+                <div className="opp-form">
+                  <div className="opp-form-row">
+                    <div className="opp-form-group">
+                      <label>Title *</label>
+                      <input
+                        type="text"
+                        value={newOpportunity.title}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, title: e.target.value})}
+                        placeholder="e.g., Series A Funding Round"
+                      />
+                    </div>
+                    <div className="opp-form-group">
+                      <label>Company *</label>
+                      <input
+                        type="text"
+                        value={newOpportunity.company}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, company: e.target.value})}
+                        placeholder="e.g., TechStart Africa"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="opp-form-group">
+                    <label>Description *</label>
+                    <textarea
+                      value={newOpportunity.description}
+                      onChange={(e) => setNewOpportunity({...newOpportunity, description: e.target.value})}
+                      placeholder="Describe the opportunity..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="opp-form-row">
+                    <div className="opp-form-group">
+                      <label>Location *</label>
+                      <input
+                        type="text"
+                        value={newOpportunity.location}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, location: e.target.value})}
+                        placeholder="e.g., Nairobi, Kenya"
+                      />
+                    </div>
+                    <div className="opp-form-group">
+                      <label>Industry *</label>
+                      <div className="opp-dropdown-container">
+                        <button
+                          type="button"
+                          className="opp-dropdown-trigger"
+                          onClick={() => setShowIndustryDropdown(!showIndustryDropdown)}
+                        >
+                          {newOpportunity.industry.length === 0 
+                            ? 'Select Industries' 
+                            : `${newOpportunity.industry.length} selected`
+                          }
+                          <span className="opp-dropdown-arrow">▼</span>
+                        </button>
+                        {showIndustryDropdown && (
+                          <div className="opp-dropdown-menu">
+                            {industries.map((industry) => (
+                              <label key={industry} className="opp-dropdown-item">
+                                <input
+                                  type="checkbox"
+                                  checked={newOpportunity.industry.includes(industry)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setNewOpportunity({
+                                        ...newOpportunity, 
+                                        industry: [...newOpportunity.industry, industry]
+                                      });
+                                    } else {
+                                      setNewOpportunity({
+                                        ...newOpportunity, 
+                                        industry: newOpportunity.industry.filter(ind => ind !== industry)
+                                      });
+                                    }
+                                  }}
+                                />
+                                <span>{industry}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="opp-form-row">
+                    <div className="opp-form-group">
+                      <label>Type *</label>
+                      <select
+                        value={newOpportunity.type}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, type: e.target.value as any})}
+                      >
+                        <option value="Funding Round">Funding Round</option>
+                        <option value="Partnership">Partnership</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Acquisition">Acquisition</option>
+                        <option value="Merger">Merger</option>
+                      </select>
+                    </div>
+                    <div className="opp-form-group">
+                      <label>Stage *</label>
+                      <select
+                        value={newOpportunity.stage}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, stage: e.target.value})}
+                      >
+                        <option value="">Select Stage</option>
+                        <option value="Seed">Seed</option>
+                        <option value="Series A">Series A</option>
+                        <option value="Series B">Series B</option>
+                        <option value="Growth Stage">Growth Stage</option>
+                        <option value="Mature">Mature</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="opp-form-row">
+                    <div className="opp-form-group">
+                      <label>Amount *</label>
+                      <input
+                        type="text"
+                        value={newOpportunity.amount}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, amount: e.target.value})}
+                        placeholder="e.g., $2,000,000"
+                      />
+                    </div>
+                    <div className="opp-form-group">
+                      <label>Equity</label>
+                      <input
+                        type="text"
+                        value={newOpportunity.equity}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, equity: e.target.value})}
+                        placeholder="e.g., 15-20%"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="opp-form-row">
+                    <div className="opp-form-group">
+                      <label>Deadline *</label>
+                      <input
+                        type="date"
+                        value={newOpportunity.deadline}
+                        onChange={(e) => setNewOpportunity({...newOpportunity, deadline: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="opp-form-group">
+                    <label>Tags</label>
+                    <div className="opp-tag-input-group">
+                      <input
+                        type="text"
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Enter a tag (e.g., Fintech)"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      />
+                      <button type="button" className="opp-add-tag-btn" onClick={addTag}>
+                        Add Tag
+                      </button>
+                    </div>
+                    {newOpportunity.tags.length > 0 && (
+                      <div className="opp-tags-display">
+                        {newOpportunity.tags.map((tag, index) => (
+                          <span key={index} className="opp-tag-item">
+                            {tag}
+                            <button type="button" className="opp-remove-tag" onClick={() => removeTag(tag)}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="opp-form-group">
+                    <label>Current Investors</label>
+                    <div className="opp-investor-input-group">
+                      <input
+                        type="text"
+                        value={newInvestor}
+                        onChange={(e) => setNewInvestor(e.target.value)}
+                        placeholder="Enter an investor (e.g., Acumen Fund)"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addInvestor())}
+                      />
+                      <button type="button" className="opp-add-investor-btn" onClick={addInvestor}>
+                        Add Investor
+                      </button>
+                    </div>
+                    {newOpportunity.investors.length > 0 && (
+                      <div className="opp-investors-display">
+                        {newOpportunity.investors.map((investor, index) => (
+                          <span key={index} className="opp-investor-item">
+                            {investor}
+                            <button type="button" className="opp-remove-investor" onClick={() => removeInvestor(investor)}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="opp-form-group">
+                    <label>Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Convert to base64 for now (in production, you'd upload to a file service)
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setNewOpportunity({...newOpportunity, image: event.target?.result as string});
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {newOpportunity.image && (
+                      <div className="opp-image-preview">
+                        <img 
+                          src={newOpportunity.image} 
+                          alt="Preview" 
+                          className="opp-preview-img"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="opp-modal-footer">
+                <button 
+                  className="opp-modal-btn opp-modal-btn--secondary"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="opp-modal-btn opp-modal-btn--primary"
+                  onClick={handleAddOpportunity}
+                >
+                  Add Opportunity
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 }
 

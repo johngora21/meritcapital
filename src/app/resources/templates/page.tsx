@@ -153,7 +153,58 @@ const resourceTemplates: ResourceTemplate[] = [
 
 export default function ResourceTemplatesPage() {
   const router = useRouter();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({
+    title: '',
+    description: '',
+    category: '',
+    type: 'template' as 'template' | 'canvas' | 'guide' | 'checklist',
+    imageUrl: '',
+    downloads: 0,
+    fileSize: '',
+    tags: [] as string[]
+  });
+  const [newTag, setNewTag] = useState('');
 
+  const addTag = () => {
+    if (newTag.trim() && !newTemplate.tags.includes(newTag.trim())) {
+      setNewTemplate({ ...newTemplate, tags: [...newTemplate.tags, newTag.trim()] });
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setNewTemplate({ ...newTemplate, tags: newTemplate.tags.filter(tag => tag !== tagToRemove) });
+  };
+
+  const handleAddTemplate = async () => {
+    try {
+      const response = await fetch('/api/v1/resources/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newTemplate)
+      });
+
+      if (response.ok) {
+        setShowAddModal(false);
+        setNewTemplate({
+          title: '',
+          description: '',
+          category: '',
+          type: 'template',
+          imageUrl: '',
+          downloads: 0,
+          fileSize: '',
+          tags: []
+        });
+        // Refresh the page or update the list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error adding template:', error);
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -166,7 +217,210 @@ export default function ResourceTemplatesPage() {
   };
 
   return (
-    <div className="rt-wrap">
+    <>
+      <style jsx>{`
+        .rt-head-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+        }
+        .rt-head-content > div:first-child {
+          flex: 1;
+        }
+        .proj-add-btn {
+          background: var(--mc-sidebar-bg);
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .proj-add-btn:hover {
+          background: var(--mc-sidebar-bg-hover);
+          transform: translateY(-1px);
+        }
+        .proj-add-btn span {
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .proj-add-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.8);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .proj-add-modal {
+          background: white;
+          border-radius: 12px;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow: hidden;
+          position: relative;
+        }
+        .proj-add-modal-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: rgba(0,0,0,0.5);
+          color: white;
+          border: none;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          font-size: 18px;
+          cursor: pointer;
+          z-index: 1001;
+        }
+        .proj-add-modal-close:hover {
+          background: rgba(0,0,0,0.7);
+        }
+        .proj-add-modal-content {
+          padding: 20px;
+        }
+        .proj-add-modal-content h2 {
+          margin: 0 0 8px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .proj-add-modal-content p {
+          margin: 0 0 16px 0;
+          font-size: 14px;
+          color: #6b7280;
+        }
+        .proj-add-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .proj-add-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .proj-add-form-group label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+        }
+        .proj-add-form-group input, .proj-add-form-group textarea, .proj-add-form-group select {
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          padding: 10px 12px;
+          font-family: inherit;
+          font-size: 14px;
+        }
+        .proj-add-form-group input:focus, .proj-add-form-group textarea:focus, .proj-add-form-group select:focus {
+          outline: none;
+          border-color: var(--mc-sidebar-bg);
+          box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+        .proj-add-form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .proj-add-form-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 8px;
+        }
+        .proj-add-cancel-btn {
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .proj-add-cancel-btn:hover {
+          background: #e5e7eb;
+        }
+        .proj-add-save-btn {
+          background: var(--mc-sidebar-bg);
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .proj-add-save-btn:hover {
+          background: var(--mc-sidebar-bg-hover);
+        }
+        .rc-tag-input-group {
+          display: flex;
+          gap: 8px;
+          max-width: 400px;
+        }
+        .rc-tag-input-group input {
+          flex: 1;
+        }
+        .rc-add-tag-btn {
+          background: var(--mc-sidebar-bg);
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .rc-add-tag-btn:hover {
+          background: var(--mc-sidebar-bg-hover);
+          transform: translateY(-1px);
+        }
+        .rc-tags-display {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .rc-tag-item {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .rc-remove-tag {
+          background: none;
+          border: none;
+          color: #6b7280;
+          cursor: pointer;
+          font-size: 16px;
+          line-height: 1;
+        }
+        .rc-remove-tag:hover {
+          color: #ef4444;
+        }
+      `}</style>
+      <div className="rt-wrap">
       <button 
         className="rt-back-btn"
         onClick={() => router.push('/resources')}
@@ -180,6 +434,12 @@ export default function ResourceTemplatesPage() {
             <h1 className="rt-title">Resource Templates</h1>
             <p className="rt-subtitle">Download templates, canvases, guides, and checklists to accelerate your startup journey</p>
           </div>
+          <button
+            className="proj-add-btn"
+            onClick={() => setShowAddModal(true)}
+          >
+            <span>+</span> Add Template
+          </button>
         </div>
       </div>
 
@@ -219,6 +479,150 @@ export default function ResourceTemplatesPage() {
           </div>
         ))}
       </div>
+
+      {/* Add Template Modal */}
+      {showAddModal && (
+        <div className="proj-add-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="proj-add-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="proj-add-modal-close" onClick={() => setShowAddModal(false)}>
+              ×
+            </button>
+            <div className="proj-add-modal-content">
+              <div className="proj-add-modal-header">
+                <h2>Add New Template</h2>
+                <p>Create a new template for the resource library</p>
+              </div>
+              <div className="proj-add-modal-body">
+                <form className="proj-add-form">
+                  <div className="proj-add-form-group">
+                    <label>Template Title *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Business Plan Template"
+                      value={newTemplate.title}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, title: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="proj-add-form-group">
+                    <label>Description *</label>
+                    <textarea
+                      placeholder="Brief description of the template"
+                      value={newTemplate.description}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="proj-add-form-row">
+                    <div className="proj-add-form-group">
+                      <label>Category *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Strategy, Finance, Marketing"
+                        value={newTemplate.category}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, category: e.target.value })}
+                      />
+                    </div>
+                    <div className="proj-add-form-group">
+                      <label>Type *</label>
+                      <select
+                        value={newTemplate.type}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, type: e.target.value as any })}
+                      >
+                        <option value="template">Template</option>
+                        <option value="canvas">Canvas</option>
+                        <option value="guide">Guide</option>
+                        <option value="checklist">Checklist</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="proj-add-form-row">
+                    <div className="proj-add-form-group">
+                      <label>File Size</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., 2.1 MB"
+                        value={newTemplate.fileSize}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, fileSize: e.target.value })}
+                      />
+                    </div>
+                    <div className="proj-add-form-group">
+                      <label>Downloads</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={newTemplate.downloads}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, downloads: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="proj-add-form-group">
+                    <label>Image URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/image.jpg"
+                      value={newTemplate.imageUrl}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, imageUrl: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="proj-add-form-group">
+                    <label>Tags</label>
+                    <div className="rc-tag-input-group">
+                      <input
+                        type="text"
+                        placeholder="Add a tag"
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      />
+                      <button type="button" className="rc-add-tag-btn" onClick={addTag}>
+                        Add
+                      </button>
+                    </div>
+                    {newTemplate.tags.length > 0 && (
+                      <div className="rc-tags-display">
+                        {newTemplate.tags.map((tag, index) => (
+                          <div key={index} className="rc-tag-item">
+                            {tag}
+                            <button
+                              type="button"
+                              className="rc-remove-tag"
+                              onClick={() => removeTag(tag)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </form>
+              </div>
+              <div className="proj-add-form-actions">
+                <button
+                  type="button"
+                  className="proj-add-cancel-btn"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="proj-add-save-btn"
+                  onClick={handleAddTemplate}
+                >
+                  Add Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 }

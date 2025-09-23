@@ -48,6 +48,47 @@ export default function ResourcesPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All Industries');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newResource, setNewResource] = useState({
+    name: '',
+    description: '',
+    duration: '',
+    startDate: '',
+    endDate: '',
+    organization: '',
+    industry: [] as string[],
+    tags: [] as string[],
+    type: 'program' as 'program' | 'lesson' | 'template',
+    imageUrl: ''
+  });
+  const [newTag, setNewTag] = useState('');
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false);
+
+  const addTag = () => {
+    if (newTag.trim() && !newResource.tags.includes(newTag.trim())) {
+      setNewResource({...newResource, tags: [...newResource.tags, newTag.trim()]});
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setNewResource({...newResource, tags: newResource.tags.filter(tag => tag !== tagToRemove)});
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.rc-dropdown-container')) {
+        setShowIndustryDropdown(false);
+      }
+    };
+
+    if (showIndustryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showIndustryDropdown]);
 
   const industries = [
     'All Industries',
@@ -115,6 +156,51 @@ export default function ResourcesPage() {
     
     return matchesSearch && matchesIndustry;
   });
+
+  const handleAddResource = async () => {
+    try {
+      const resourceData = {
+        ...newResource,
+        imageUrl: newResource.imageUrl || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80&auto=format&fit=crop",
+        enrolled: false,
+        closed: false
+      };
+
+      const endpoint = newResource.type === 'program' ? '/api/v1/resources/programs' : '/api/v1/resources/lessons';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(resourceData)
+      });
+
+      if (response.ok) {
+        setShowAddModal(false);
+        setNewResource({
+          name: '',
+          description: '',
+          duration: '',
+          startDate: '',
+          endDate: '',
+          organization: '',
+          industry: [],
+          tags: [],
+          type: 'program' as 'program' | 'lesson' | 'template',
+          imageUrl: ''
+        });
+        setNewTag('');
+        // Refresh the page or update the resources list
+        window.location.reload();
+      } else {
+        console.error('Failed to add resource');
+      }
+    } catch (error) {
+      console.error('Error adding resource:', error);
+    }
+  };
 
   const renderPrograms = () => (
     <>
@@ -295,6 +381,15 @@ export default function ResourcesPage() {
             </select>
           </div>
         </div>
+        <button
+          className="proj-add-btn"
+          onClick={() => {
+            setNewResource({ ...newResource, type: 'template' });
+            setShowAddModal(true);
+          }}
+        >
+          <span>+</span> Add Template
+        </button>
       </div>
 
       <div className="rc-grid rc-grid--three">
@@ -327,8 +422,265 @@ export default function ResourcesPage() {
   );
 
   return (
-    <div className="rc-wrap">
+    <>
+      <style jsx>{`
+        .rc-wrap { display: grid; gap: 24px; padding: 24px; }
+        
+        .rc-head { 
+          display: flex; flex-direction: column; gap: 8px;
+          padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; 
+        }
+        .rc-header-top {
+          display: flex; justify-content: flex-end; align-items: center;
+          gap: 16px; margin-bottom: 16px;
+        }
+        .rc-head h2 { margin: 0; font-size: 28px; font-weight: 800; color: #111827; }
+        .rc-head p { margin: 0; color: #6b7280; font-size: 14px; }
+        
+        .rc-toolbar { 
+          display: flex; justify-content: space-between; align-items: center; 
+          gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+        }
+        .rc-filters { display: flex; gap: 12px; flex-wrap: wrap; }
+        
+        .rc-search, .rc-industry-filter {
+          padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+          font-size: 14px; background: white; min-width: 150px;
+        }
+        .rc-search:focus, .rc-industry-filter:focus {
+          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .rc-add-btn {
+          padding: 10px 20px; background: #3b82f6; color: white; border: none;
+          border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: background-color 0.2s;
+        }
+        .rc-add-btn:hover { background: #2563eb; }
+        
+        .rc-grid { 
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+          gap: 20px; 
+        }
+        
+        .rc-card { 
+          background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+          overflow: hidden; cursor: pointer; transition: all 0.2s;
+        }
+        .rc-card:hover { 
+          border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+        
+        .rc-card-header { position: relative; height: 120px; overflow: hidden; }
+        .rc-image { width: 100%; height: 100%; }
+        .rc-image img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .rc-card-body { padding: 16px; }
+        .rc-card-title { 
+          font-size: 16px; font-weight: 700; color: #111827; 
+          margin: 0 0 4px; line-height: 1.3;
+        }
+        .rc-card-subtitle { 
+          color: #6b7280; font-size: 14px; margin: 0 0 8px; 
+        }
+        .rc-card-description { 
+          color: #4b5563; font-size: 13px; line-height: 1.4; 
+          margin: 0 0 12px; display: -webkit-box; -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical; overflow: hidden;
+        }
+        
+        .rc-card-meta { 
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 12px; font-size: 12px; color: #6b7280;
+        }
+        .rc-card-duration { display: flex; align-items: center; gap: 4px; }
+        .rc-card-views { display: flex; align-items: center; gap: 4px; }
+        
+        .rc-card-footer { 
+          display: flex; justify-content: space-between; align-items: center;
+          padding-top: 12px; border-top: 1px solid #f3f4f6;
+        }
+        .rc-card-status { 
+          font-weight: 600; font-size: 12px; padding: 4px 8px;
+          border-radius: 4px; text-transform: uppercase;
+        }
+        .rc-card-status.enrolled { 
+          background: #dcfce7; color: #166534; 
+        }
+        .rc-card-status.closed { 
+          background: #fee2e2; color: #dc2626; 
+        }
+        .rc-card-status.open { 
+          background: #dbeafe; color: #1d4ed8; 
+        }
+        .rc-card-industry { 
+          background: #f3f4f6; color: #374151; padding: 4px 8px;
+          border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        
+        .rc-modal-overlay { 
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.8); z-index: 1000;
+          display: flex; align-items: center; justify-content: center;
+          padding: 20px;
+        }
+        
+        .rc-modal { 
+          background: white; border-radius: 12px; max-width: 600px; 
+          width: 100%; max-height: 80vh; overflow: hidden;
+          position: relative;
+        }
+        
+        .rc-modal-close { 
+          position: absolute; top: 16px; right: 16px; z-index: 10;
+          background: rgba(0,0,0,0.5); color: white; border: none;
+          width: 32px; height: 32px; border-radius: 50%; font-size: 18px;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .rc-modal-close:hover { background: rgba(0,0,0,0.7); }
+        
+        .rc-modal-content { padding: 20px; }
+        .rc-modal-header { margin-bottom: 12px; }
+        .rc-modal-header h2 { 
+          margin: 0; font-size: 20px; font-weight: 600; color: #1f2937; 
+        }
+        
+        .rc-modal-body { margin-bottom: 20px; }
+        .rc-form { display: flex; flex-direction: column; gap: 16px; }
+        .rc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .rc-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .rc-form-group label { 
+          font-weight: 600; color: #374151; font-size: 14px; 
+        }
+        .rc-form-group input, .rc-form-group select, .rc-form-group textarea {
+          padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+          font-size: 14px; background: white; transition: border-color 0.2s;
+        }
+        .rc-form-group input:focus, .rc-form-group select:focus, .rc-form-group textarea:focus {
+          outline: none; border-color: var(--mc-sidebar-bg); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+        .rc-form-group textarea { resize: vertical; min-height: 80px; }
+        
+        .rc-modal-footer { 
+          display: flex; justify-content: flex-end; gap: 12px;
+          padding-top: 20px; border-top: 1px solid #e5e7eb;
+        }
+        .rc-modal-btn { 
+          padding: 10px 20px; border-radius: 8px; font-weight: 600; 
+          cursor: pointer; font-size: 14px; transition: all 0.2s;
+        }
+        .rc-modal-btn--secondary { 
+          background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+        }
+        .rc-modal-btn--secondary:hover { background: #e5e7eb; }
+        .rc-modal-btn--primary { 
+          background: var(--mc-sidebar-bg); color: white; border: none;
+        }
+        .rc-modal-btn--primary:hover { 
+          background: var(--mc-sidebar-bg-hover); transform: translateY(-1px); 
+        }
+        
+        .rc-tag-input-group {
+          display: flex; gap: 8px; margin-bottom: 8px;
+        }
+        .rc-tag-input-group input {
+          flex: 1; margin-bottom: 0;
+        }
+        .rc-add-tag-btn {
+          padding: 10px 16px; background: #10b981; color: white; border: none;
+          border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: background-color 0.2s; white-space: nowrap;
+        }
+        .rc-add-tag-btn:hover {
+          background: #059669;
+        }
+        
+        .rc-tags-display {
+          display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+        }
+        .rc-tag-item {
+          display: inline-flex; align-items: center; gap: 4px;
+          background: #f3f4f6; color: #374151; padding: 4px 8px;
+          border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        .rc-remove-tag {
+          background: none; border: none; color: #6b7280; cursor: pointer;
+          font-size: 16px; line-height: 1; padding: 0; margin-left: 4px;
+        }
+        .rc-remove-tag:hover {
+          color: #ef4444;
+        }
+        
+        .rc-image-preview {
+          margin-top: 8px;
+        }
+        .rc-preview-img {
+          width: 100px; height: 100px; object-fit: cover; 
+          border-radius: 8px; border: 1px solid #d1d5db;
+        }
+        
+        .rc-dropdown-container {
+          position: relative; width: 100%;
+        }
+        .rc-dropdown-trigger {
+          width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; 
+          border-radius: 8px; background: white; cursor: pointer;
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 14px; color: #374151; transition: border-color 0.2s;
+        }
+        .rc-dropdown-trigger:hover {
+          border-color: #3b82f6;
+        }
+        .rc-dropdown-trigger:focus {
+          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .rc-dropdown-arrow {
+          font-size: 12px; color: #6b7280; transition: transform 0.2s;
+        }
+        .rc-dropdown-menu {
+          position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+          background: white; border: 1px solid #d1d5db; border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); max-height: 200px;
+          overflow-y: auto; margin-top: 4px;
+        }
+        .rc-dropdown-item {
+          display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+          cursor: pointer; transition: background-color 0.2s;
+        }
+        .rc-dropdown-item:hover {
+          background: #f8fafc;
+        }
+        .rc-dropdown-item input[type="checkbox"] {
+          margin: 0; cursor: pointer; width: 16px; height: 16px;
+          accent-color: #3b82f6;
+        }
+        .rc-dropdown-item span {
+          font-size: 14px; color: #374151; cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+          .rc-header-top { flex-direction: column; align-items: stretch; }
+          .rc-toolbar { flex-direction: column; align-items: stretch; }
+          .rc-filters { justify-content: stretch; }
+          .rc-search, .rc-industry-filter { min-width: auto; }
+          .rc-grid { grid-template-columns: 1fr; }
+          .rc-form-row { grid-template-columns: 1fr; }
+          .rc-industry-checkboxes { grid-template-columns: repeat(2, 1fr); }
+          .rc-modal { margin: 10px; max-height: calc(100vh - 20px); }
+        }
+      `}</style>
+      
+      <div className="rc-wrap">
       <div className="rc-head">
+        <div className="rc-header-top">
+          <button
+            className="proj-add-btn"
+            onClick={() => setShowAddModal(true)}
+          >
+            <span>+</span> Add Resource
+          </button>
+        </div>
         <Tabs
           items={tabs}
           activeIndex={activeTab}
@@ -492,7 +844,231 @@ export default function ResourcesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Resource Modal */}
+      {showAddModal && (
+        <div className="rc-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="rc-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="rc-modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            <div className="rc-modal-content">
+              <div className="rc-modal-header">
+                <h2>Add New Resource</h2>
+              </div>
+              
+              <div className="rc-modal-body">
+                <div className="rc-form">
+                  <div className="rc-form-group">
+                    <label>Resource Type *</label>
+                    <select
+                      value={newResource.type}
+                      onChange={(e) => setNewResource({...newResource, type: e.target.value as 'program' | 'lesson' | 'template'})}
+                    >
+                      <option value="program">Program</option>
+                      <option value="lesson">Lesson</option>
+                      <option value="template">Template</option>
+                    </select>
+                  </div>
+
+                  <div className="rc-form-group">
+                    <label>{newResource.type === 'program' ? 'Program Name' : newResource.type === 'lesson' ? 'Lesson Title' : 'Template Title'} *</label>
+                    <input
+                      type="text"
+                      value={newResource.name}
+                      onChange={(e) => setNewResource({...newResource, name: e.target.value})}
+                      placeholder={newResource.type === 'program' ? 'e.g., Startup Accelerator Program' : newResource.type === 'lesson' ? 'e.g., Pitching Your Startup to Investors' : 'e.g., Business Plan Template'}
+                    />
+                  </div>
+
+                  {newResource.type !== 'template' && (
+                    <div className="rc-form-group">
+                      <label>Description *</label>
+                      <textarea
+                        value={newResource.description}
+                        onChange={(e) => setNewResource({...newResource, description: e.target.value})}
+                        placeholder="Describe the resource..."
+                        rows={3}
+                      />
+                    </div>
+                  )}
+
+                  {newResource.type !== 'template' && (
+                    <>
+                      <div className="rc-form-row">
+                        <div className="rc-form-group">
+                          <label>Industry *</label>
+                          <div className="rc-dropdown-container">
+                            <button
+                              type="button"
+                              className="rc-dropdown-trigger"
+                              onClick={() => setShowIndustryDropdown(!showIndustryDropdown)}
+                            >
+                              {newResource.industry.length === 0 
+                                ? 'Select Industries' 
+                                : `${newResource.industry.length} selected`
+                              }
+                              <span className="rc-dropdown-arrow">▼</span>
+                            </button>
+                            {showIndustryDropdown && (
+                              <div className="rc-dropdown-menu">
+                                {industries.filter(i => i !== 'All Industries').map((industry) => (
+                                  <label key={industry} className="rc-dropdown-item">
+                                    <input
+                                      type="checkbox"
+                                      checked={newResource.industry.includes(industry)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setNewResource({
+                                            ...newResource, 
+                                            industry: [...newResource.industry, industry]
+                                          });
+                                        } else {
+                                          setNewResource({
+                                            ...newResource, 
+                                            industry: newResource.industry.filter(ind => ind !== industry)
+                                          });
+                                        }
+                                      }}
+                                    />
+                                    <span>{industry}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rc-form-group">
+                          <label>Duration *</label>
+                          <input
+                            type="text"
+                            value={newResource.duration}
+                            onChange={(e) => setNewResource({...newResource, duration: e.target.value})}
+                            placeholder={newResource.type === 'program' ? 'e.g., 12 weeks' : 'e.g., 45 min'}
+                          />
+                        </div>
+                      </div>
+
+                      {newResource.type === 'program' && (
+                        <>
+                          <div className="rc-form-row">
+                            <div className="rc-form-group">
+                              <label>Start Date *</label>
+                              <input
+                                type="date"
+                                value={newResource.startDate}
+                                onChange={(e) => setNewResource({...newResource, startDate: e.target.value})}
+                              />
+                            </div>
+                            <div className="rc-form-group">
+                              <label>End Date *</label>
+                              <input
+                                type="date"
+                                value={newResource.endDate}
+                                onChange={(e) => setNewResource({...newResource, endDate: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                          <div className="rc-form-group">
+                            <label>Organization *</label>
+                            <input
+                              type="text"
+                              value={newResource.organization}
+                              onChange={(e) => setNewResource({...newResource, organization: e.target.value})}
+                              placeholder="e.g., Merit Capital Academy"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {newResource.type === 'lesson' && (
+                        <div className="rc-form-group">
+                          <label>Instructor *</label>
+                          <input
+                            type="text"
+                            value={newResource.organization}
+                            onChange={(e) => setNewResource({...newResource, organization: e.target.value})}
+                            placeholder="e.g., Sarah Johnson"
+                          />
+                        </div>
+                      )}
+
+                      <div className="rc-form-group">
+                        <label>Tags</label>
+                        <div className="rc-tag-input-group">
+                          <input
+                            type="text"
+                            value={newTag}
+                            onChange={(e) => setNewTag(e.target.value)}
+                            placeholder="Enter a tag (e.g., Business)"
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                          />
+                          <button type="button" className="rc-add-tag-btn" onClick={addTag}>
+                            Add Tag
+                          </button>
+                        </div>
+                        {newResource.tags.length > 0 && (
+                          <div className="rc-tags-display">
+                            {newResource.tags.map((tag, index) => (
+                              <span key={index} className="rc-tag-item">
+                                {tag}
+                                <button type="button" className="rc-remove-tag" onClick={() => removeTag(tag)}>×</button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  <div className="rc-form-group">
+                    <label>Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Convert to base64 for now (in production, you'd upload to a file service)
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setNewResource({...newResource, imageUrl: event.target?.result as string});
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {newResource.imageUrl && (
+                      <div className="rc-image-preview">
+                        <img 
+                          src={newResource.imageUrl} 
+                          alt="Preview" 
+                          className="rc-preview-img"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rc-modal-footer">
+                <button 
+                  className="rc-modal-btn rc-modal-btn--secondary"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="rc-modal-btn rc-modal-btn--primary"
+                  onClick={handleAddResource}
+                >
+                  Add {newResource.type === 'program' ? 'Program' : newResource.type === 'lesson' ? 'Lesson' : 'Template'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 }
 

@@ -30,63 +30,24 @@ const industries = [
   "Impact & Sustainability"
 ];
 
-const projects: Project[] = [
-  {
-    id: "1",
-    name: "AgriTech Solutions",
-    description: "Revolutionizing smallholder farming through mobile technology and data analytics. Helping farmers increase yields by 40% through smart irrigation and crop monitoring.",
-    stage: "Growth",
-    industry: "Agriculture",
-    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&q=80&auto=format&fit=crop",
-    founded: "2020",
-    employees: "15-20",
-    revenue: "$500K+",
-    tags: ["AgriTech", "Mobile Technology", "Data Analytics", "Smallholder Farming"],
-    website: "agritechsolutions.ke",
-    linkedin: "agritech-solutions",
-    seeking: ["Series A Funding", "Strategic Partnerships", "Market Expansion"],
-    status: "Active",
-    lastUpdated: "2024-01-15"
-  },
-  {
-    id: "2",
-    name: "FinFlow",
-    description: "A fintech startup providing digital payment solutions for SMEs across East Africa. Processed over $10M in transactions with 50,000+ active merchants.",
-    stage: "Scale",
-    industry: "Finance",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop",
-    founded: "2019",
-    employees: "25-30",
-    revenue: "$2M+",
-    tags: ["Fintech", "Digital Payments", "SME Banking", "West Africa"],
-    website: "finflow.ng",
-    linkedin: "finflow-ng",
-    seeking: ["Series B Funding", "Talent Acquisition", "Regional Expansion"],
-    status: "Active",
-    lastUpdated: "2024-01-10"
-  },
-  {
-    id: "3",
-    name: "EduLearn Africa",
-    description: "An edtech platform providing quality education to underserved communities. Reached 100,000+ students across 15 African countries with localized content.",
-    stage: "Growth",
-    industry: "Education",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80&auto=format&fit=crop",
-    founded: "2021",
-    employees: "20-25",
-    revenue: "$800K+",
-    tags: ["EdTech", "Online Learning", "Localized Content", "Southern Africa"],
-    website: "edulearn.africa",
-    linkedin: "edulearn-africa",
-    seeking: ["Series A Funding", "Content Partnerships", "Technology Upgrades"],
-    status: "Paused",
-    lastUpdated: "2023-12-20"
-  }
-];
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+
+function useProjects(): Project[] {
+  const [items, setItems] = React.useState<Project[]>([]);
+  React.useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+    fetch(`${API}/projects/cards`, { headers: { Authorization: `Bearer ${token}` }})
+      .then(r => r.json())
+      .then((data) => setItems((data?.data || []) as Project[]))
+      .catch(() => setItems([]));
+  }, []);
+  return items;
+}
 
 export default function ProjectsPage() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
+  const projects = useProjects();
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStage, setSelectedStage] = React.useState("");
   const [selectedStatus, setSelectedStatus] = React.useState("");

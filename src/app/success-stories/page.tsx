@@ -106,6 +106,17 @@ export default function SuccessStoriesPage() {
   const [query, setQuery] = React.useState("");
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStory, setSelectedStory] = React.useState<Story | null>(null);
+  const [showAddModal, setShowAddModal] = React.useState(false);
+  const [newStory, setNewStory] = React.useState({
+    title: '',
+    description: '',
+    date: '',
+    videoUrl: '',
+    poster: '',
+    fullStory: '',
+    publishedDate: '',
+    industry: ''
+  });
   const filtered = stories.filter((s) => {
     const matchesQuery = s.title.toLowerCase().includes(query.toLowerCase());
     const matchesIndustry = selectedIndustry === "" || s.industry === selectedIndustry;
@@ -120,11 +131,203 @@ export default function SuccessStoriesPage() {
     setSelectedStory(null);
   };
 
+  const handleAddStory = async () => {
+    try {
+      const response = await fetch('/api/v1/success-stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newStory)
+      });
+
+      if (response.ok) {
+        setShowAddModal(false);
+        setNewStory({
+          title: '',
+          description: '',
+          date: '',
+          videoUrl: '',
+          poster: '',
+          fullStory: '',
+          publishedDate: '',
+          industry: ''
+        });
+        // Refresh the page or update the list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error adding story:', error);
+    }
+  };
+
   return (
-    <div className="ss-wrap">
+    <>
+      <style jsx>{`
+        .ss-head-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+        }
+        .ss-head-content > div:first-child {
+          flex: 1;
+        }
+        .proj-add-btn {
+          background: var(--mc-sidebar-bg);
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .proj-add-btn:hover {
+          background: var(--mc-sidebar-bg-hover);
+          transform: translateY(-1px);
+        }
+        .proj-add-btn span {
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .proj-add-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.8);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .proj-add-modal {
+          background: white;
+          border-radius: 12px;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow: hidden;
+          position: relative;
+        }
+        .proj-add-modal-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: rgba(0,0,0,0.5);
+          color: white;
+          border: none;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          font-size: 18px;
+          cursor: pointer;
+          z-index: 1001;
+        }
+        .proj-add-modal-close:hover {
+          background: rgba(0,0,0,0.7);
+        }
+        .proj-add-modal-content {
+          padding: 20px;
+        }
+        .proj-add-modal-content h2 {
+          margin: 0 0 8px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .proj-add-modal-content p {
+          margin: 0 0 16px 0;
+          font-size: 14px;
+          color: #6b7280;
+        }
+        .proj-add-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .proj-add-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .proj-add-form-group label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+        }
+        .proj-add-form-group input, .proj-add-form-group textarea, .proj-add-form-group select {
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          padding: 10px 12px;
+          font-family: inherit;
+          font-size: 14px;
+        }
+        .proj-add-form-group input:focus, .proj-add-form-group textarea:focus, .proj-add-form-group select:focus {
+          outline: none;
+          border-color: var(--mc-sidebar-bg);
+          box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+        .proj-add-form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .proj-add-form-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 8px;
+        }
+        .proj-add-cancel-btn {
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .proj-add-cancel-btn:hover {
+          background: #e5e7eb;
+        }
+        .proj-add-save-btn {
+          background: var(--mc-sidebar-bg);
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .proj-add-save-btn:hover {
+          background: var(--mc-sidebar-bg-hover);
+        }
+      `}</style>
+      <div className="ss-wrap">
       <div className="ss-head">
-        <h2>Success Stories</h2>
-        <p>Inspiring stories of entrepreneurial success</p>
+        <div className="ss-head-content">
+          <div>
+            <h2>Success Stories</h2>
+            <p>Inspiring stories of entrepreneurial success</p>
+          </div>
+          <button
+            className="proj-add-btn"
+            onClick={() => setShowAddModal(true)}
+          >
+            <span>+</span> Add Story
+          </button>
+        </div>
       </div>
       <div className="ss-toolbar">
         <div className="ss-filters">
@@ -193,7 +396,111 @@ export default function SuccessStoriesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Story Modal */}
+      {showAddModal && (
+        <div className="proj-add-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="proj-add-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="proj-add-modal-close" onClick={() => setShowAddModal(false)}>
+              ×
+            </button>
+            <div className="proj-add-modal-content">
+              <div className="proj-add-modal-header">
+                <h2>Add New Success Story</h2>
+                <p>Create a new inspiring success story</p>
+              </div>
+              <div className="proj-add-modal-body">
+                <form className="proj-add-form">
+                  <div className="proj-add-form-group">
+                    <label>Story Title *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Amala Technologies: Transforming Financial Inclusion with Digital Solutions for SACCOs and MFIs"
+                      value={newStory.title}
+                      onChange={(e) => setNewStory({ ...newStory, title: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="proj-add-form-group">
+                    <label>Story Content *</label>
+                    <textarea
+                      placeholder="Complete story content (first part will be shown as brief description on the card)"
+                      value={newStory.fullStory}
+                      onChange={(e) => setNewStory({ ...newStory, fullStory: e.target.value })}
+                      rows={5}
+                    />
+                  </div>
+
+                  <div className="proj-add-form-row">
+                    <div className="proj-add-form-group">
+                      <label>Industry *</label>
+                      <select
+                        value={newStory.industry}
+                        onChange={(e) => setNewStory({ ...newStory, industry: e.target.value })}
+                      >
+                        <option value="">Select Industry</option>
+                        {industries.map((industry) => (
+                          <option key={industry} value={industry}>
+                            {industry}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="proj-add-form-group">
+                      <label>Published Date *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., 8/10/2025, 5:40:15 PM"
+                        value={newStory.publishedDate}
+                        onChange={(e) => setNewStory({ ...newStory, publishedDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="proj-add-form-row">
+                    <div className="proj-add-form-group">
+                      <label>Video URL *</label>
+                      <input
+                        type="url"
+                        placeholder="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                        value={newStory.videoUrl}
+                        onChange={(e) => setNewStory({ ...newStory, videoUrl: e.target.value })}
+                      />
+                    </div>
+                    <div className="proj-add-form-group">
+                      <label>Poster Image URL *</label>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/photo-1556157382-97eda2d62296?w=1200&q=80&auto=format&fit=crop"
+                        value={newStory.poster}
+                        onChange={(e) => setNewStory({ ...newStory, poster: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div className="proj-add-form-actions">
+                <button
+                  type="button"
+                  className="proj-add-cancel-btn"
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="proj-add-save-btn"
+                  onClick={handleAddStory}
+                >
+                  Add Story
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 }
 
