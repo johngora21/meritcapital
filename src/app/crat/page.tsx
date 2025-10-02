@@ -3,6 +3,12 @@ import { Tabs, BarChart } from '@/components';
 import { Eye, Trash2, Paperclip } from 'lucide-react';
 import React from 'react';
 
+// Minimal project shape for dropdown purposes
+type CratProject = {
+  id: string | number;
+  name: string;
+};
+
 type Project = {
   id: string;
   name: string;
@@ -16,52 +22,38 @@ type Project = {
   tags: string[];
 };
 
-const sampleProjects: Project[] = [
-  {
-    id: '1',
-    name: 'AgriTech Solutions',
-    description: 'Revolutionizing smallholder farming through mobile technology and data analytics. Helping farmers increase yields by 40% through smart irrigation and crop monitoring.',
-    stage: 'Growth',
-    industry: 'Agriculture',
-    status: 'Active',
-    revenue: '$500K+',
-    lastUpdated: 'Jan 15, 2024',
-    imageUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&q=80&auto=format&fit=crop',
-    tags: ['AgriTech', 'Mobile Technology', 'Data Analytics']
-  },
-  {
-    id: '2',
-    name: 'FinFlow',
-    description: 'A fintech startup providing digital payment solutions for SMEs across East Africa. Processed over $10M in transactions with 50,000+ active merchants.',
-    stage: 'Scale',
-    industry: 'Finance',
-    status: 'Active',
-    revenue: '$2M+',
-    lastUpdated: 'Jan 10, 2024',
-    imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80&auto=format&fit=crop',
-    tags: ['Fintech', 'Digital Payments', 'SME Banking']
-  },
-  {
-    id: '3',
-    name: 'EduLearn Africa',
-    description: 'An edtech platform providing quality education to underserved communities. Reached 100,000+ students across 15 African countries with localized content.',
-    stage: 'Growth',
-    industry: 'Education',
-    status: 'Paused',
-    revenue: '$800K+',
-    lastUpdated: 'Dec 20, 2023',
-    imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=80&auto=format&fit=crop',
-    tags: ['EdTech', 'Online Learning', 'Localized Content']
-  }
-];
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
 
 export default function CratPage() {
   const [tab, setTab] = React.useState(0);
-  const [selectedProject, setSelectedProject] = React.useState<Project | null>(sampleProjects[0]);
+  const [projects, setProjects] = React.useState<CratProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = React.useState<boolean>(true);
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | number | ''>('');
   const [ratings, setRatings] = React.useState<Record<string, 'yes' | 'maybe' | 'no'>>({});
   const [attachments, setAttachments] = React.useState<Record<string, string>>({});
   const getKey = (section: string, sub: string) => `${section}|${sub}`;
   const getScoreFromRating = (r?: 'yes' | 'maybe' | 'no') => (r === 'yes' ? 2 : r === 'maybe' ? 1 : 0);
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`${API}/projects/cards`, { credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        const items: any[] = data?.data || [];
+        const mapped: CratProject[] = items.map((p: any) => ({ id: p.id, name: p.name }));
+        setProjects(mapped);
+        setSelectedProjectId((prev) => (prev !== '' ? prev : (mapped[0]?.id ?? '')));
+      } catch {
+        setProjects([]);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    load();
+  }, []);
+
+  const selectedProject = projects.find(p => `${p.id}` === `${selectedProjectId}`) || null;
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -69,14 +61,14 @@ export default function CratPage() {
         <div className="crat-project-dropdown">
           <select
             id="project-select"
-            value={selectedProject?.id || ''}
-            onChange={(e) => {
-              const project = sampleProjects.find(p => p.id === e.target.value);
-              setSelectedProject(project || null);
-            }}
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
             className="crat-project-select"
+            disabled={loadingProjects || projects.length === 0}
           >
-            {sampleProjects.map((project) => (
+            {loadingProjects && <option value="">Loading projects...</option>}
+            {!loadingProjects && projects.length === 0 && <option value="">No projects found</option>}
+            {!loadingProjects && projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
               </option>

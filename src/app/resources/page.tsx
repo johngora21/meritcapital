@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs } from '@/components';
 
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+
 type ResourceCategory = { name: string; imageUrl: string };
 type Program = { name: string; description: string; duration: string; startDate: string; endDate: string; organization: string; imageUrl: string; enrolled: boolean; closed: boolean; tags: string[]; industry: string };
 type Lesson = { title: string; instructor: string; duration: string; imageUrl: string; views: number; industry: string; description: string; tags: string[] };
@@ -49,6 +51,9 @@ export default function ResourcesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All Industries');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [programItems, setProgramItems] = useState<Program[]>(programs);
+  const [lessonItems, setLessonItems] = useState<Lesson[]>(lessons);
   const [newResource, setNewResource] = useState({
     name: '',
     description: '',
@@ -63,6 +68,23 @@ export default function ResourcesPage() {
   });
   const [newTag, setNewTag] = useState('');
   const [showIndustryDropdown, setShowIndustryDropdown] = useState(false);
+
+  React.useEffect(() => {
+    const loadRole = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        const res = await fetch(`${API}/auth/me`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => ({}));
+        setIsAdmin((data?.data?.role || '').toLowerCase() === 'admin');
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+    loadRole();
+  }, []);
 
   const addTag = () => {
     if (newTag.trim() && !newResource.tags.includes(newTag.trim())) {
@@ -136,7 +158,7 @@ export default function ResourcesPage() {
   };
 
   // Filter programs based on search and industry
-  const filteredPrograms = programs.filter(program => {
+  const filteredPrograms = programItems.filter(program => {
     const matchesSearch = program.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          program.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          program.organization.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -148,7 +170,7 @@ export default function ResourcesPage() {
   });
 
   // Filter lessons based on search and industry
-  const filteredLessons = lessons.filter(lesson => {
+  const filteredLessons = lessonItems.filter(lesson => {
     const matchesSearch = lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          lesson.instructor.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -178,6 +200,13 @@ export default function ResourcesPage() {
       });
 
       if (response.ok) {
+        const returned = await response.json().catch(() => null);
+        const created = returned?.data || resourceData;
+        if (newResource.type === 'program') {
+          setProgramItems((prev) => [...prev, created]);
+        } else if (newResource.type === 'lesson') {
+          setLessonItems((prev) => [...prev, created]);
+        }
         setShowAddModal(false);
         setNewResource({
           name: '',
@@ -192,8 +221,6 @@ export default function ResourcesPage() {
           imageUrl: ''
         });
         setNewTag('');
-        // Refresh the page or update the resources list
-        window.location.reload();
       } else {
         console.error('Failed to add resource');
       }
@@ -381,6 +408,7 @@ export default function ResourcesPage() {
             </select>
           </div>
         </div>
+        {isAdmin && (
         <button
           className="proj-add-btn"
           onClick={() => {
@@ -390,6 +418,7 @@ export default function ResourcesPage() {
         >
           <span>+</span> Add Template
         </button>
+        )}
       </div>
 
       <div className="rc-grid rc-grid--three">
@@ -674,12 +703,14 @@ export default function ResourcesPage() {
       <div className="rc-wrap">
       <div className="rc-head">
         <div className="rc-header-top">
+          {isAdmin && (
           <button
             className="proj-add-btn"
             onClick={() => setShowAddModal(true)}
           >
             <span>+</span> Add Resource
           </button>
+          )}
         </div>
         <Tabs
           items={tabs}
@@ -1071,7 +1102,5 @@ export default function ResourcesPage() {
     </>
   );
 }
-
-// removed duplicate default export
 
 

@@ -16,3 +16,7 @@ export const listMessages = async (chat_id) => ChatMessage.findAll({ where: { ch
 
 export default { listChats, createChat, postMessage, listMessages };
 
+
+
+
+

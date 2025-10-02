@@ -11,3 +11,7 @@ export const Investment = sequelize.define('investments', {
 
 export default { Investment };
 
+
+
+
+

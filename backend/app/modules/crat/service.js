@@ -14,3 +14,7 @@ export const seedDomains = async () => {
 
 export default { createAssessment, listAssessments, upsertAnswer, seedDomains };
 
+
+
+
+

@@ -1,6 +1,8 @@
 "use client";
 import React from 'react';
 
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+
 type Story = {
   title: string;
   description: string;
@@ -107,6 +109,8 @@ export default function SuccessStoriesPage() {
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStory, setSelectedStory] = React.useState<Story | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [items, setItems] = React.useState<Story[]>(stories);
   const [newStory, setNewStory] = React.useState({
     title: '',
     description: '',
@@ -117,6 +121,24 @@ export default function SuccessStoriesPage() {
     publishedDate: '',
     industry: ''
   });
+
+  React.useEffect(() => {
+    const loadRole = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        const res = await fetch(`${API}/auth/me`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => ({}));
+        setIsAdmin((data?.data?.role || '').toLowerCase() === 'admin');
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+    loadRole();
+  }, []);
+
   const filtered = stories.filter((s) => {
     const matchesQuery = s.title.toLowerCase().includes(query.toLowerCase());
     const matchesIndustry = selectedIndustry === "" || s.industry === selectedIndustry;
@@ -141,6 +163,12 @@ export default function SuccessStoriesPage() {
       });
 
       if (response.ok) {
+        const returned = await response.json().catch(() => null);
+        const created: Story = returned?.data || {
+          ...newStory,
+          publishedDate: newStory.publishedDate || new Date().toLocaleString(),
+        };
+        setItems((prev) => [...prev, created]);
         setShowAddModal(false);
         setNewStory({
           title: '',
@@ -152,8 +180,6 @@ export default function SuccessStoriesPage() {
           publishedDate: '',
           industry: ''
         });
-        // Refresh the page or update the list
-        window.location.reload();
       }
     } catch (error) {
       console.error('Error adding story:', error);
@@ -321,12 +347,14 @@ export default function SuccessStoriesPage() {
             <h2>Success Stories</h2>
             <p>Inspiring stories of entrepreneurial success</p>
           </div>
+          {isAdmin && (
           <button
             className="proj-add-btn"
             onClick={() => setShowAddModal(true)}
           >
             <span>+</span> Add Story
           </button>
+          )}
         </div>
       </div>
       <div className="ss-toolbar">
@@ -352,7 +380,11 @@ export default function SuccessStoriesPage() {
         </div>
       </div>
       <div className="ss-grid">
-        {filtered.map((s) => (
+        {items.filter((s) => {
+          const matchesQuery = s.title.toLowerCase().includes(query.toLowerCase());
+          const matchesIndustry = selectedIndustry === "" || s.industry === selectedIndustry;
+          return matchesQuery && matchesIndustry;
+        }).map((s) => (
           <article key={s.title} className="ss-card" onClick={() => openModal(s)}>
             <div className="ss-media">
               <img src={s.poster} alt={s.title} className="ss-poster" />

@@ -1,6 +1,8 @@
 "use client";
 import React from 'react';
 
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+
 type Opportunity = {
   id: string;
   title: string;
@@ -145,6 +147,8 @@ export default function OpportunitiesPage() {
   const [selectedType, setSelectedType] = React.useState("");
   const [selectedOpportunity, setSelectedOpportunity] = React.useState<Opportunity | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [items, setItems] = React.useState<Opportunity[]>(opportunities);
   const [newOpportunity, setNewOpportunity] = React.useState({
     title: '',
     company: '',
@@ -163,6 +167,23 @@ export default function OpportunitiesPage() {
   const [newTag, setNewTag] = React.useState('');
   const [newInvestor, setNewInvestor] = React.useState('');
   const [showIndustryDropdown, setShowIndustryDropdown] = React.useState(false);
+
+  React.useEffect(() => {
+    const loadRole = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        const res = await fetch(`${API}/auth/me`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => ({}));
+        setIsAdmin((data?.data?.role || '').toLowerCase() === 'admin');
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+    loadRole();
+  }, []);
 
   const addTag = () => {
     if (newTag.trim() && !newOpportunity.tags.includes(newTag.trim())) {
@@ -201,7 +222,7 @@ export default function OpportunitiesPage() {
     }
   }, [showIndustryDropdown]);
 
-  const filtered = opportunities.filter((opp) => {
+  const filtered = items.filter((opp) => {
     const matchesQuery = opp.title.toLowerCase().includes(query.toLowerCase()) || 
                         opp.company.toLowerCase().includes(query.toLowerCase());
     const matchesIndustry = selectedIndustry === "" || opp.industry === selectedIndustry;
@@ -219,7 +240,7 @@ export default function OpportunitiesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Open': return '#10b981';
+      case 'Open': return 'var(--mc-sidebar-bg)';
       case 'Closing Soon': return '#f59e0b';
       case 'Closed': return '#ef4444';
       default: return '#6b7280';
@@ -237,11 +258,13 @@ export default function OpportunitiesPage() {
   const handleAddOpportunity = async () => {
     try {
       const opportunityData = {
+        id: Date.now().toString(),
         ...newOpportunity,
+        industry: newOpportunity.industry[0] || '',
         postedDate: new Date().toISOString().split('T')[0],
         image: newOpportunity.image || "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80&auto=format&fit=crop",
         status: "Open" as const
-      };
+      } as Opportunity;
 
       const response = await fetch('/api/v1/opportunities', {
         method: 'POST',
@@ -253,6 +276,10 @@ export default function OpportunitiesPage() {
       });
 
       if (response.ok) {
+        // Prefer server-returned entity if available
+        const returned = await response.json().catch(() => null);
+        const created: Opportunity | null = returned?.data ? returned.data : null;
+        setItems((prev) => [...prev, (created as any) || opportunityData]);
         setShowAddModal(false);
         setNewOpportunity({
           title: '',
@@ -271,8 +298,6 @@ export default function OpportunitiesPage() {
         });
         setNewTag('');
         setNewInvestor('');
-        // Refresh the page or update the opportunities list
-        window.location.reload();
       } else {
         console.error('Failed to add opportunity');
       }
@@ -304,15 +329,15 @@ export default function OpportunitiesPage() {
           font-size: 14px; background: white; min-width: 150px;
         }
         .opp-search:focus, .opp-industry-filter:focus, .opp-type-filter:focus {
-          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          outline: none; border-color: var(--mc-sidebar-bg); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
         }
         
         .opp-add-btn {
-          padding: 10px 20px; background: #3b82f6; color: white; border: none;
+          padding: 10px 20px; background: var(--mc-sidebar-bg); color: white; border: none;
           border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
           transition: background-color 0.2s;
         }
-        .opp-add-btn:hover { background: #2563eb; }
+        .opp-add-btn:hover { background: var(--mc-sidebar-bg-hover); }
         
         .opp-grid { 
           display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
@@ -324,7 +349,7 @@ export default function OpportunitiesPage() {
           overflow: hidden; cursor: pointer; transition: all 0.2s;
         }
         .opp-card:hover { 
-          border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border-color: var(--mc-sidebar-bg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           transform: translateY(-2px);
         }
         
@@ -358,7 +383,7 @@ export default function OpportunitiesPage() {
           padding-top: 12px; border-top: 1px solid #f3f4f6;
         }
         .opp-card-amount { 
-          font-weight: 700; color: #059669; font-size: 14px; 
+          font-weight: 700; color: #1f2937; font-size: 14px; 
         }
         .opp-card-stage { 
           background: #f3f4f6; color: #374151; padding: 4px 8px;
@@ -434,12 +459,12 @@ export default function OpportunitiesPage() {
           flex: 1; margin-bottom: 0;
         }
         .opp-add-tag-btn, .opp-add-investor-btn {
-          padding: 10px 16px; background: #10b981; color: white; border: none;
+          padding: 10px 16px; background: var(--mc-sidebar-bg); color: white; border: none;
           border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
           transition: background-color 0.2s; white-space: nowrap;
         }
         .opp-add-tag-btn:hover, .opp-add-investor-btn:hover {
-          background: #059669;
+          background: var(--mc-sidebar-bg-hover);
         }
         
         .opp-tags-display, .opp-investors-display {
@@ -476,10 +501,10 @@ export default function OpportunitiesPage() {
           font-size: 14px; color: #374151; transition: border-color 0.2s;
         }
         .opp-dropdown-trigger:hover {
-          border-color: #3b82f6;
+          border-color: var(--mc-sidebar-bg);
         }
         .opp-dropdown-trigger:focus {
-          outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          outline: none; border-color: var(--mc-sidebar-bg); box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
         }
         .opp-dropdown-arrow {
           font-size: 12px; color: #6b7280; transition: transform 0.2s;
@@ -499,7 +524,7 @@ export default function OpportunitiesPage() {
         }
         .opp-dropdown-item input[type="checkbox"] {
           margin: 0; cursor: pointer; width: 16px; height: 16px;
-          accent-color: #3b82f6;
+          accent-color: var(--mc-sidebar-bg);
         }
         .opp-dropdown-item span {
           font-size: 14px; color: #374151; cursor: pointer;
@@ -555,12 +580,14 @@ export default function OpportunitiesPage() {
             <option value="Mature">Mature</option>
           </select>
         </div>
+        {isAdmin && (
         <button 
           className="proj-add-btn"
           onClick={() => setShowAddModal(true)}
         >
           <span>+</span> Add Opportunity
         </button>
+        )}
       </div>
 
       <div className="opp-grid">

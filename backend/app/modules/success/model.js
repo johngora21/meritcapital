@@ -11,3 +11,7 @@ export const SuccessStory = sequelize.define('success_stories', {
 
 export default { SuccessStory };
 
+
+
+
+

@@ -13,3 +13,7 @@ export const Session = sequelize.define('sessions', {
 
 export default { Session };
 
+
+
+
+

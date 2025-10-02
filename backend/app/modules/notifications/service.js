@@ -10,3 +10,7 @@ export const markRead = async (id, user_id) => {
 
 export default { list, create, markRead };
 
+
+
+
+

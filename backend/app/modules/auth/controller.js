@@ -24,7 +24,8 @@ export const login = async (req, res, next) => {
       }
     }
     const token = crypto.randomBytes(32).toString('hex');
-    await Session.create({ user_id: user.id, token, user_agent: req.headers['user-agent'] || '', ip: req.ip || '' });
+    const expiresAt = new Date(Date.now() + 7*24*60*60*1000);
+    await Session.create({ user_id: user.id, token, user_agent: req.headers['user-agent'] || '', ip: req.ip || '', expires_at: expiresAt });
     const isProd = env.nodeEnv === 'production';
     res.cookie(cookieName, token, {
       httpOnly: true,

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRoutes from '../app/modules/auth/routes.js';
 import usersRoutes from '../app/modules/users/routes.js';
 import projectsRoutes from '../app/modules/projects/routes.js';
 import chatsRoutes from '../app/modules/chats/routes.js';
@@ -15,6 +16,7 @@ import adminRoutes from '../app/modules/admin/routes.js';
 
 const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/chats', chatsRoutes);

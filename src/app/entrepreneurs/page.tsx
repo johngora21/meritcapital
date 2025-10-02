@@ -1,6 +1,8 @@
 "use client";
 import React from 'react';
 
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+
 type Startup = {
   id: string;
   name: string;
@@ -29,118 +31,48 @@ const industries = [
   "Impact & Sustainability"
 ];
 
-const startups: Startup[] = [
-  {
-    id: "1",
-    name: "AgriTech Solutions",
-    founder: "Grace Mwangi",
-    description: "Founder of AgriTech Solutions, revolutionizing smallholder farming through mobile technology and data analytics. Helping farmers increase yields by 40% through smart irrigation and crop monitoring.",
-    location: "Nairobi, Kenya",
-    stage: "Growth",
-    industry: "Agriculture",
-    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&q=80&auto=format&fit=crop",
-    founded: "2020",
-    employees: "15-20",
-    revenue: "$500K+",
-    tags: ["AgriTech", "Mobile Technology", "Data Analytics", "Smallholder Farming"],
-    linkedin: "grace-mwangi",
-    website: "agritechsolutions.ke",
-    seeking: ["Series A Funding", "Strategic Partnerships", "Market Expansion"]
-  },
-  {
-    id: "2",
-    name: "FinFlow",
-    founder: "James Ochieng",
-    description: "CEO of FinFlow, a fintech startup providing digital payment solutions for SMEs across East Africa. Processed over $10M in transactions with 50,000+ active merchants.",
-    location: "Lagos, Nigeria",
-    stage: "Scale",
-    industry: "Finance",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop",
-    founded: "2019",
-    employees: "25-30",
-    revenue: "$2M+",
-    tags: ["Fintech", "Digital Payments", "SME Banking", "West Africa"],
-    linkedin: "james-ochieng",
-    website: "finflow.ng",
-    seeking: ["Series B Funding", "Talent Acquisition", "Regional Expansion"]
-  },
-  {
-    id: "3",
-    name: "EduLearn Africa",
-    founder: "Fatima Hassan",
-    description: "Founder of EduLearn Africa, an edtech platform providing quality education to underserved communities. Reached 100,000+ students across 15 African countries with localized content.",
-    location: "Cape Town, South Africa",
-    stage: "Growth",
-    industry: "Education",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80&auto=format&fit=crop",
-    founded: "2021",
-    employees: "20-25",
-    revenue: "$800K+",
-    tags: ["EdTech", "Online Learning", "Localized Content", "Southern Africa"],
-    linkedin: "fatima-hassan",
-    website: "edulearn.africa",
-    seeking: ["Series A Funding", "Content Partnerships", "Technology Upgrades"]
-  },
-  {
-    id: "4",
-    name: "HealthConnect",
-    founder: "Michael Chen",
-    description: "CEO of HealthConnect, a healthtech startup connecting patients with healthcare providers through telemedicine. Served 200,000+ patients and partnered with 500+ healthcare providers.",
-    location: "Kigali, Rwanda",
-    stage: "Early Stage",
-    industry: "Health",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop",
-    founded: "2022",
-    employees: "10-15",
-    revenue: "$300K+",
-    tags: ["HealthTech", "Telemedicine", "Healthcare Access", "East Africa"],
-    linkedin: "michael-chen",
-    website: "healthconnect.rw",
-    seeking: ["Seed Funding", "Healthcare Partnerships", "Regulatory Support"]
-  },
-  {
-    id: "5",
-    name: "CleanEnergy Solutions",
-    founder: "Dr. Amina Ndege",
-    description: "Founder of CleanEnergy Solutions, developing affordable solar solutions for rural communities. Installed 10,000+ solar systems and provided clean energy to 50,000+ people.",
-    location: "Dar es Salaam, Tanzania",
-    stage: "Growth",
-    industry: "Energy",
-    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80&auto=format&fit=crop",
-    founded: "2020",
-    employees: "18-22",
-    revenue: "$1.2M+",
-    tags: ["Clean Energy", "Solar Technology", "Rural Development", "Tanzania"],
-    linkedin: "amina-ndege",
-    website: "cleanenergy.tz",
-    seeking: ["Series A Funding", "Manufacturing Partnerships", "Distribution Networks"]
-  },
-  {
-    id: "6",
-    name: "LogiTech Africa",
-    founder: "David Kimani",
-    description: "CEO of LogiTech Africa, a logistics technology company optimizing supply chains across East Africa. Reduced delivery times by 60% and cut logistics costs by 30% for 500+ businesses.",
-    location: "Nairobi, Kenya",
-    stage: "Scale",
-    industry: "Digital Technology",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80&auto=format&fit=crop",
-    founded: "2018",
-    employees: "35-40",
-    revenue: "$3M+",
-    tags: ["Logistics", "Supply Chain", "Technology", "East Africa"],
-    linkedin: "david-kimani",
-    website: "logitech.africa",
-    seeking: ["Series B Funding", "Regional Expansion", "Technology Partnerships"]
-  }
-];
-
 export default function StartupsPage() {
   const [query, setQuery] = React.useState("");
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStage, setSelectedStage] = React.useState("");
   const [selectedStartup, setSelectedStartup] = React.useState<Startup | null>(null);
+  const [items, setItems] = React.useState<Startup[]>([]);
 
-  const filtered = startups.filter((startup) => {
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || '') : '';
+        const res = await fetch(`${API}/projects/cards`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        const rows: any[] = data?.data || [];
+        // Only approved/exposed projects: assume status === 'Active'
+        const approved = rows.filter((p: any) => (p?.status || '').toLowerCase() === 'active');
+        const mapped: Startup[] = approved.map((p: any) => ({
+          id: String(p.id),
+          name: p.name || '',
+          founder: p.founder || '',
+          description: p.description || '',
+          location: p.location || '',
+          stage: (p.stage || 'Idea') as Startup['stage'],
+          industry: p.industry || '',
+          image: p.image || p.imageUrl || '',
+          founded: p.founded || '',
+          employees: p.employees || '',
+          revenue: p.revenue || '',
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          linkedin: p.linkedin,
+          website: p.website,
+          seeking: Array.isArray(p.seeking) ? p.seeking : (p.seeking ? String(p.seeking).split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+        }));
+        setItems(mapped);
+      } catch {
+        setItems([]);
+      }
+    };
+    load();
+  }, []);
+
+  const filtered = items.filter((startup) => {
     const matchesQuery = startup.name.toLowerCase().includes(query.toLowerCase()) || 
                         startup.founder.toLowerCase().includes(query.toLowerCase()) ||
                         startup.description.toLowerCase().includes(query.toLowerCase());
@@ -220,7 +152,7 @@ export default function StartupsPage() {
             
             <div className="ent-card-body">
               <h3 className="ent-title">{startup.name}</h3>
-              <p className="ent-founder">Founded by {startup.founder}</p>
+              <p className="ent-founder">{startup.founder ? `Founded by ${startup.founder}` : ''}</p>
               <p className="ent-description">{startup.description}</p>
               
               <div className="ent-meta-simple">
@@ -270,7 +202,9 @@ export default function StartupsPage() {
               <div className="ent-modal-body">
                 <div className="ent-modal-header-info">
                   <h2 className="ent-modal-title">{selectedStartup.name}</h2>
-                  <p className="ent-modal-founder">Founded by {selectedStartup.founder}</p>
+                  {selectedStartup.founder && (
+                    <p className="ent-modal-founder">Founded by {selectedStartup.founder}</p>
+                  )}
                 </div>
                 
                 <p className="ent-modal-description">{selectedStartup.description}</p>
@@ -283,22 +217,30 @@ export default function StartupsPage() {
                         <span className="ent-modal-meta-label">Stage:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.stage}</span>
                       </div>
+                      {selectedStartup.founded && (
                       <div className="ent-modal-meta-item">
                         <span className="ent-modal-meta-label">Founded:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.founded}</span>
                       </div>
+                      )}
+                      {selectedStartup.employees && (
                       <div className="ent-modal-meta-item">
                         <span className="ent-modal-meta-label">Employees:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.employees}</span>
                       </div>
+                      )}
+                      {selectedStartup.revenue && (
                       <div className="ent-modal-meta-item">
                         <span className="ent-modal-meta-label">Revenue:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.revenue}</span>
                       </div>
+                      )}
+                      {selectedStartup.location && (
                       <div className="ent-modal-meta-item">
                         <span className="ent-modal-meta-label">Location:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.location}</span>
                       </div>
+                      )}
                       <div className="ent-modal-meta-item">
                         <span className="ent-modal-meta-label">Industry:</span>
                         <span className="ent-modal-meta-value">{selectedStartup.industry}</span>
@@ -306,6 +248,7 @@ export default function StartupsPage() {
                     </div>
                   </div>
 
+                  {selectedStartup.tags?.length > 0 && (
                   <div className="ent-modal-section">
                     <h3>Focus Areas</h3>
                     <div className="ent-modal-tags">
@@ -314,7 +257,9 @@ export default function StartupsPage() {
                       ))}
                     </div>
                   </div>
+                  )}
 
+                  {selectedStartup.seeking?.length > 0 && (
                   <div className="ent-modal-section">
                     <h3>Currently Seeking</h3>
                     <div className="ent-modal-seeking">
@@ -323,6 +268,7 @@ export default function StartupsPage() {
                       ))}
                     </div>
                   </div>
+                  )}
 
                   <div className="ent-modal-section">
                     <h3>Actions</h3>

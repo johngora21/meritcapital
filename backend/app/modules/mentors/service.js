@@ -8,3 +8,7 @@ export const remove = (id) => Mentor.destroy({ where: { id } });
 
 export default { list, get, create, update, remove };
 
+
+
+
+

@@ -15,5 +15,23 @@ export const findByEmail = async (email) => User.findOne({ where: { email } });
 
 export const listUsers = async () => User.findAll({ order: [['id', 'DESC']] });
 
-export default { createUser, findByEmail, listUsers };
+export const updateUser = async (userId, updateData) => {
+  const user = await User.findByPk(userId);
+  if (!user) return null;
+  
+  // Only update fields that are provided
+  const allowedFields = ['full_name', 'phone', 'location', 'bio', 'company', 'position', 'website', 'linkedin', 'twitter', 'avatar'];
+  const fieldsToUpdate = {};
+  
+  for (const field of allowedFields) {
+    if (updateData[field] !== undefined) {
+      fieldsToUpdate[field] = updateData[field];
+    }
+  }
+  
+  await user.update(fieldsToUpdate);
+  return user;
+};
+
+export default { createUser, findByEmail, listUsers, updateUser };
 

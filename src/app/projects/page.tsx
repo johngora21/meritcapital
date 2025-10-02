@@ -35,8 +35,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
 function useProjects(): Project[] {
   const [items, setItems] = React.useState<Project[]>([]);
   React.useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-    fetch(`${API}/projects/cards`, { headers: { Authorization: `Bearer ${token}` }})
+    fetch(`${API}/projects/cards`, { credentials: 'include' })
       .then(r => r.json())
       .then((data) => setItems((data?.data || []) as Project[]))
       .catch(() => setItems([]));

@@ -11,3 +11,7 @@ export const Startup = sequelize.define('startups', {
 
 export default { Startup };
 
+
+
+
+

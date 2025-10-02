@@ -129,18 +129,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   INDEX(chat_id, created_at)
 ) ENGINE=InnoDB;
 
--- Opportunities
-CREATE TABLE IF NOT EXISTS opportunities (
-  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  title VARCHAR(191) NOT NULL,
-  description TEXT NULL,
-  type VARCHAR(64) NULL,
-  status ENUM('Open','Closed') DEFAULT 'Open',
-  deadline DATETIME NULL,
-  link VARCHAR(512) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+-- Opportunities (basic table removed in favor of richer schema below)
 
 -- Resources
 CREATE TABLE IF NOT EXISTS resources (

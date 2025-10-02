@@ -48,3 +48,7 @@ CratQuestion.belongsTo(CratDomain, { foreignKey: 'domain_id' });
 
 export default { CratAssessment, CratDomain, CratQuestion, CratAnswer, CratDomainScore };
 
+
+
+
+

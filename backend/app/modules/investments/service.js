@@ -7,3 +7,7 @@ export const remove = (id, investor_user_id) => Investment.destroy({ where: { id
 
 export default { listMine, listAll, create, remove };
 
+
+
+
+

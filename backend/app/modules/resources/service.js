@@ -8,3 +8,7 @@ export const remove = (id) => Resource.destroy({ where: { id } });
 
 export default { list, get, create, update, remove };
 
+
+
+
+

@@ -7,3 +7,7 @@ export const read = async (req, res, next) => { try { const x = await svc.markRe
 
 export default { myNotifications, create, read };
 
+
+
+
+

@@ -8,3 +8,7 @@ export const remove = (id) => SuccessStory.destroy({ where: { id } });
 
 export default { list, get, create, update, remove };
 
+
+
+
+

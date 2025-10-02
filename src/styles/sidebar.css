@@ -2,9 +2,9 @@
 
 :root {
   /* Slate-inspired palette to mirror iris */
-  --mc-sidebar-bg: #0f172a; /* slate-900 */
-  --mc-sidebar-bg-hover: #1e293b; /* slate-800 */
-  --mc-text: #e2e8f0; /* slate-200 */
+  --mc-sidebar-bg: #1e293b; /* was #0f172a, lighten to slate-800 */
+  --mc-sidebar-bg-hover: #334155; /* was #1e293b, lighten hover to slate-700 */
+  --mc-text: #ffffff; /* sidebar text now pure white */
   --mc-muted: #94a3b8; /* slate-400 */
   --mc-accent: #008000; /* smooth green buttons per preference */
   --mc-accent-hover: #0a8a0a;
@@ -25,6 +25,57 @@ html {
 }
 body { font-family: 'Poppins', sans-serif; }
 
+/* Profile page styles */
+.profile-container {
+  font-family: 'Poppins', sans-serif;
+}
+
+.profile-card {
+  background: white;
+  border-radius: var(--mc-radius-md);
+  box-shadow: var(--mc-shadow-sm);
+  border: 1px solid #e5e7eb;
+}
+
+.profile-input {
+  font-family: 'Poppins', sans-serif;
+  border: 1px solid #d1d5db;
+  border-radius: var(--mc-radius-sm);
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: var(--mc-accent);
+  box-shadow: 0 0 0 3px rgba(0, 128, 0, 0.1);
+}
+
+.profile-button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  border-radius: var(--mc-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.profile-button-primary {
+  background: var(--mc-accent);
+  color: white;
+}
+
+.profile-button-primary:hover {
+  background: var(--mc-accent-hover);
+}
+
+.profile-button-secondary {
+  background: #6b7280;
+  color: white;
+}
+
+.profile-button-secondary:hover {
+  background: #4b5563;
+}
+
 .mc-sidebar {
   font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   background: var(--mc-sidebar-bg);
@@ -40,6 +91,8 @@ body { font-family: 'Poppins', sans-serif; }
   top: 0;
   overflow: hidden;
   z-index: 30;
+  border-top-right-radius: var(--mc-radius-md);
+  border-bottom-right-radius: var(--mc-radius-md);
 }
 
 .mc-sidebar--collapsed {
@@ -212,6 +265,15 @@ body { font-family: 'Poppins', sans-serif; }
 
 .rc-btn:hover {
   background: var(--mc-sidebar-bg-hover);
+  transform: translateY(-1px);
+}
+
+.rc-btn--danger {
+  background: #ef4444;
+}
+
+.rc-btn--danger:hover {
+  background: #dc2626;
   transform: translateY(-1px);
 }
 
@@ -2842,7 +2904,7 @@ body { font-family: 'Poppins', sans-serif; }
   padding: 16px 16px; /* closer to iris spacing */
   height: 80px; /* fixed top height like iris */
   box-sizing: border-box;
-  border-bottom: 1px solid var(--mc-separator);
+  border-bottom: 1px solid rgba(255,255,255,0.12); /* thin visible divider */
   flex-shrink: 0; /* keep top fixed height; avoid nav sitting beside */
 }
 
@@ -2908,7 +2970,7 @@ body { font-family: 'Poppins', sans-serif; }
 
 .mc-nav-group { margin-bottom: 12px; }
 .mc-nav-group__label {
-  color: var(--mc-muted);
+  color: #ffffff;
   font-size: 11px;
   letter-spacing: .04em;
   padding: 6px 10px;
@@ -2926,7 +2988,7 @@ body { font-family: 'Poppins', sans-serif; }
   align-items: center;
   gap: 12px;
   padding: 8px 12px; /* px-3 py-2 */
-  color: #cbd5e1; /* slate-300 */
+  color: #ffffff; /* was slate-300; make white */
   background: transparent;
   border: none;
   border-radius: var(--mc-radius-sm);
@@ -2936,10 +2998,16 @@ body { font-family: 'Poppins', sans-serif; }
 
 .mc-nav-link:hover { background: var(--mc-sidebar-bg-hover); color: #ffffff; }
 .mc-nav-link:active { transform: translateY(1px); }
-.mc-nav-link--active { background: var(--mc-sidebar-bg-hover); color: #ffffff; }
+.mc-nav-link--active,
+.mc-nav-link--active:hover {
+  background: #ffffff;
+  color: var(--mc-sidebar-bg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.mc-nav-link--active .mc-nav-link__icon { color: var(--mc-sidebar-bg); }
 
 .mc-nav-link__icon { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; opacity: 0.95; }
-.mc-nav-link__label { font-size: 16px; }
+.mc-nav-link__label { font-size: 16px; font-weight: 600; }
 
 .mc-badge {
   margin-left: auto;
@@ -2950,7 +3018,7 @@ body { font-family: 'Poppins', sans-serif; }
   border-radius: 999px;
 }
 
-.mc-sidebar__bottom { padding: 16px; border-top: 1px solid var(--mc-separator); flex-shrink: 0; }
+.mc-sidebar__bottom { padding: 16px; border-top: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; }
 
 .mc-btn {
   font-family: inherit;

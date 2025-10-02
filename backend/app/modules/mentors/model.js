@@ -10,3 +10,7 @@ export const Mentor = sequelize.define('mentors', {
 
 export default { Mentor };
 
+
+
+
+

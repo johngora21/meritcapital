@@ -1,69 +1,103 @@
 "use client";
 import React from 'react';
 
-type Investment = {
-  id: number;
-  startup_id: number;
-  amount_text?: string;
-  note?: string;
-  created_at: string;
+type InvestmentItem = {
+  id: string;
+  name: string;
+  industry: string;
+  stage: string;
+  amount: string;
+  date: string;
+  image: string;
+  location?: string;
+  founder?: string;
+  description?: string;
+  revenue?: string;
+  tags?: string[];
 };
 
-const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+// Seeded demo; replace with API when available
+const seededInvestments: InvestmentItem[] = [
+  { id: 'i1', name: 'TechStart Africa', industry: 'Digital Technology', stage: 'Series A', amount: '$200,000', date: '2024-07-10', image: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?w=800&q=80&auto=format&fit=crop', location: 'Nairobi, Kenya', founder: 'Amina Yusuf', description: 'Fintech platform scaling across East Africa.', revenue: '$100K - $500K', tags: ['Fintech','SME','Payments'] },
+  { id: 'i2', name: 'GreenFields Ltd', industry: 'Agriculture', stage: 'Growth Stage', amount: '$120,000', date: '2024-09-02', image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80&auto=format&fit=crop', location: 'Dar es Salaam, Tanzania', founder: 'Joseph Mwangi', description: 'Sustainable farming solutions and distribution.', revenue: '$500K - $1M', tags: ['AgriTech','Sustainability'] },
+  { id: 'i3', name: 'MedTech Solutions', industry: 'Health', stage: 'Mature', amount: '$300,000', date: '2024-11-18', image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=800&q=80&auto=format&fit=crop', location: 'Kigali, Rwanda', founder: 'Grace Nkurunziza', description: 'Health tech platform for providers.', revenue: '$1M - $5M', tags: ['HealthTech','Platform'] },
+];
 
 export default function InvestmentsPage() {
-  const [items, setItems] = React.useState<Investment[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
+  const [items, setItems] = React.useState<InvestmentItem[]>(seededInvestments);
 
-  React.useEffect(() => {
-    const token = localStorage.getItem('token') || '';
-    fetch(`${API}/investments`, { headers: { Authorization: `Bearer ${token}` }})
-      .then(r => r.json())
-      .then(data => { setItems(data.data || []); setLoading(false); })
-      .catch(e => { setError('Failed to load investments'); setLoading(false); });
-  }, []);
+  const filtered = items.filter((x) =>
+    x.name.toLowerCase().includes(query.toLowerCase()) ||
+    x.industry.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <div className="invst-wrap">
-      <div className="invst-head">
+    <div className="ent-wrap">
+      <div className="ent-head">
         <h2>Investments</h2>
-        <p>Track your startup investments</p>
+        <p>Your portfolio of startup investments</p>
       </div>
-      {loading && <div className="invst-empty">Loading...</div>}
-      {error && <div className="invst-empty" style={{ color: '#ef4444' }}>{error}</div>}
-      {!loading && !error && (
-        <div className="invst-list">
-          {items.length === 0 ? (
-            <div className="invst-empty">No investments yet</div>
-          ) : (
-            <table className="invst-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Startup</th>
-                  <th>Amount</th>
-                  <th>Note</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(x => (
-                  <tr key={x.id}>
-                    <td>{x.id}</td>
-                    <td>#{x.startup_id}</td>
-                    <td>{x.amount_text || '-'}</td>
-                    <td title={x.note}>{x.note?.slice(0, 40) || '-'}</td>
-                    <td>{new Date(x.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+
+      <div className="ent-toolbar">
+        <div className="ent-filters">
+          <input
+            className="ent-search"
+            placeholder="Search startups or industries..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
-      )}
+      </div>
+
+      <div className="ent-grid">
+        {filtered.map((s) => (
+          <div key={s.id} className="ent-card">
+            <div className="ent-card-header">
+              <div className="ent-image">
+                <img src={s.image} alt={s.name} />
+                <div className="ent-industry-overlay">{s.industry}</div>
+              </div>
+            </div>
+
+            <div className="ent-card-body">
+              <h3 className="ent-title">{s.name}</h3>
+              <p className="ent-founder">{s.founder ? `Founded by ${s.founder}` : ''}</p>
+              {s.description && <p className="ent-description">{s.description}</p>}
+              <div className="ent-meta-simple">
+                <div className="ent-meta-item">
+                  <span className="ent-meta-label">Stage:</span>
+                  <span className="ent-meta-value">{s.stage}</span>
+                </div>
+                <div className="ent-meta-item">
+                  <span className="ent-meta-label">Invested:</span>
+                  <span className="ent-meta-value">{s.amount}</span>
+                </div>
+              </div>
+              {s.tags && s.tags.length > 0 && (
+                <div className="ent-tags">
+                  {s.tags.slice(0, 3).map((tag) => (
+                    <span key={tag} className="ent-tag">{tag}</span>
+                  ))}
+                  {s.tags.length > 3 && (
+                    <span className="ent-tag">+{s.tags.length - 3} more</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="ent-card-footer">
+              <div className="ent-footer-left">
+                <span className="ent-location">{s.location || ''}</span>
+              </div>
+              <div className="ent-footer-right">
+                <span className="ent-location">Invested on {new Date(s.date).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
 

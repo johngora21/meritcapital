@@ -94,12 +94,15 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             <button className="mc-icon-btn" aria-label="Notifications">
               <Bell size={18} />
             </button>
-            <div className="mc-userchip">
+            <div 
+              className="mc-userchip cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => router.push('/profile')}
+            >
               <div className="mc-userinfo">
                 <span className="mc-username">{user?.full_name || 'Guest'}</span>
                 <span className="mc-role">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ''}</span>
               </div>
-              <span className="mc-avatar">EC</span>
+              <span className="mc-avatar">{user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}</span>
             </div>
           </>
         )

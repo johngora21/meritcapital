@@ -27,3 +27,7 @@ export const remove = async (req, res, next) => {
 
 export default { list, create, remove };
 
+
+
+
+

@@ -28,3 +28,7 @@ ChatMessage.belongsTo(Chat, { foreignKey: 'chat_id' });
 
 export default { Chat, ChatParticipant, ChatMessage };
 
+
+
+
+

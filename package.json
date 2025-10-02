@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 1570",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p 1570",
     "lint": "next lint"
   },
   "dependencies": {
@@ -19,8 +19,11 @@
     "@types/node": "20.14.9",
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.9",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.14",
     "typescript": "5.5.4"
   }
 }

@@ -36,5 +36,28 @@ export const login = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-export default { list, signup, login };
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { full_name, phone, location, bio, company, position, website, linkedin, twitter, avatar } = req.body;
+    
+    const user = await usersService.updateUser(userId, {
+      full_name,
+      phone,
+      location,
+      bio,
+      company,
+      position,
+      website,
+      linkedin,
+      twitter,
+      avatar
+    });
+    
+    if (!user) throw new HttpError(404, 'User not found');
+    res.json({ data: user });
+  } catch (e) { next(e); }
+};
+
+export default { list, signup, login, updateProfile };
 
