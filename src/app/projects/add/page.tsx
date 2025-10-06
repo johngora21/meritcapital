@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
 type FormData = {
@@ -238,8 +238,13 @@ const sdgOptions = [
   "Partnerships for the Goals"
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
+
 export default function AddStartupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEdit = searchParams.get('edit') === 'true';
+  const projectId = searchParams.get('id');
   const [formData, setFormData] = React.useState<FormData>({
     startupName: '',
     tagline: '',
@@ -310,7 +315,108 @@ export default function AddStartupPage() {
   });
 
   const [currentStep, setCurrentStep] = React.useState(1);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   const totalSteps = 6;
+
+  // Load project data when editing
+  React.useEffect(() => {
+    if (isEdit && projectId) {
+      const loadProjectData = async () => {
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+          const response = await fetch(`${API_BASE}/api/v1/projects/${projectId}`, {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to load project: ${response.status} ${response.statusText}`);
+          }
+          
+          const project = await response.json();
+          console.log('Loaded project data:', project);
+          
+          if (project.data) {
+            const data = project.data;
+            console.log('Setting form data with:', data);
+            setFormData({
+              startupName: data.name || '',
+              tagline: data.tagline || '',
+              description: data.description || '',
+              website: data.website || '',
+              logo: null,
+              founderName: data.founder_name || '',
+              founderRole: data.founder_role || '',
+              founderEmail: data.founder_email || '',
+              founderPhone: data.founder_phone || '',
+              founderLinkedin: data.founder_linkedin || '',
+              teamSize: data.employees || '',
+              teamMembers: [],
+              coFounders: [],
+              industry: data.industry || '',
+              businessStage: data.stage || '',
+              foundedDate: data.founded || '',
+              legalStructure: data.legal_structure || '',
+              registrationNumber: data.registration_number || '',
+              taxId: data.tax_id || '',
+              headquartersCountry: data.headquarters_country || '',
+              headquartersCity: data.headquarters_city || '',
+              primaryMarket: data.primary_market || '',
+              targetMarkets: Array.isArray(data.target_markets) ? data.target_markets : [],
+              operatingCountries: Array.isArray(data.operating_countries) ? data.operating_countries : [],
+              problemStatement: data.problem_statement || '',
+              solutionDescription: data.solution_description || '',
+              keyFeatures: data.key_features || '',
+              targetCustomer: data.target_customer || '',
+              valueProposition: data.value_proposition || '',
+              marketSize: data.market_size || '',
+              competitiveAdvantage: data.competitive_advantage || '',
+              mainCompetitors: data.main_competitors || '',
+              marketPenetration: data.market_penetration || '',
+              customerAcquisitionCost: data.customer_acquisition_cost || '',
+              customerLifetimeValue: data.customer_lifetime_value || '',
+              monthlyActiveUsers: data.monthly_active_users || '',
+              revenueGrowthRate: data.revenue_growth_rate || '',
+              keyPerformanceIndicators: data.key_performance_indicators || '',
+              fundingStage: data.funding_stage || '',
+              fundingRaised: data.funding_raised || '',
+              monthlyBurnRate: data.monthly_burn_rate || '',
+              runway: data.runway || '',
+              productType: Array.isArray(data.product_type) ? data.product_type : [],
+              seekingInvestment: data.seeking_investment || '',
+              investmentAmountNeeded: data.investment_amount_needed || '',
+              useOfFunds: data.use_of_funds || '',
+              previousInvestors: data.previous_investors || '',
+              investmentTimeline: data.investment_timeline || '',
+              intellectualProperty: Array.isArray(data.intellectual_property) ? data.intellectual_property : [],
+              socialMission: data.social_mission || '',
+              impactMetrics: data.impact_metrics || '',
+              sdgAlignment: Array.isArray(data.sdg_alignment) ? data.sdg_alignment : [],
+              beneficiaries: data.beneficiaries || '',
+              regulatoryCompliance: data.regulatory_compliance || '',
+              dataPrivacyCompliance: data.data_privacy_compliance || '',
+              preferredContactMethod: data.preferred_contact_method || '',
+              bestTimeToContact: data.best_time_to_contact || '',
+              demoVideo: data.demo_video || '',
+              pressCoverage: data.press_coverage || '',
+              awardsRecognition: data.awards_recognition || '',
+              partnerships: data.partnerships || '',
+              newsletterSubscription: false,
+              marketingCommunications: false
+            });
+          }
+        } catch (error) {
+          console.error('Error loading project data:', error);
+          setSubmitError('Failed to load project data for editing');
+        }
+      };
+      loadProjectData();
+    }
+  }, [isEdit, projectId]);
 
   const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({
@@ -399,11 +505,113 @@ export default function AddStartupPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Here you would typically send the data to your backend
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Transform form data to match backend schema
+      const projectData = {
+        name: formData.startupName,
+        description: formData.description,
+        stage: formData.businessStage,
+        industry: formData.industry,
+        image_url: '', // Will be handled separately for file uploads
+        founded: formData.foundedDate,
+        employees: formData.teamSize,
+        revenue_text: formData.currentRevenue,
+        website: formData.website,
+        linkedin: formData.founderLinkedin,
+        seeking: [
+          ...(formData.seekingInvestment === 'Yes' ? ['Investment'] : []),
+          'Partnership',
+          'Mentorship'
+        ].join(', '),
+        status: 'Active',
+        last_updated: new Date().toISOString(),
+        // Additional comprehensive fields
+        tagline: formData.tagline,
+        founder_name: formData.founderName,
+        founder_role: formData.founderRole,
+        founder_email: formData.founderEmail,
+        founder_phone: formData.founderPhone,
+        founder_linkedin: formData.founderLinkedin,
+        headquarters_country: formData.headquartersCountry,
+        headquarters_city: formData.headquartersCity,
+        legal_structure: formData.legalStructure,
+        registration_number: formData.registrationNumber,
+        tax_id: formData.taxId,
+        primary_market: formData.primaryMarket,
+        target_markets: Array.isArray(formData.targetMarkets) ? formData.targetMarkets : [],
+        operating_countries: Array.isArray(formData.operatingCountries) ? formData.operatingCountries : [],
+        problem_statement: formData.problemStatement,
+        solution_description: formData.solutionDescription,
+        key_features: formData.keyFeatures,
+        target_customer: formData.targetCustomer,
+        value_proposition: formData.valueProposition,
+        market_size: formData.marketSize,
+        competitive_advantage: formData.competitiveAdvantage,
+        main_competitors: formData.mainCompetitors,
+        market_penetration: formData.marketPenetration,
+        customer_acquisition_cost: formData.customerAcquisitionCost,
+        customer_lifetime_value: formData.customerLifetimeValue,
+        monthly_active_users: formData.monthlyActiveUsers,
+        revenue_growth_rate: formData.revenueGrowthRate,
+        key_performance_indicators: formData.keyPerformanceIndicators,
+        funding_stage: formData.fundingStage,
+        funding_raised: formData.fundingRaised,
+        monthly_burn_rate: formData.monthlyBurnRate,
+        runway: formData.runway,
+        product_type: Array.isArray(formData.productType) ? formData.productType : [],
+        seeking_investment: formData.seekingInvestment,
+        investment_amount_needed: formData.investmentAmountNeeded,
+        use_of_funds: formData.useOfFunds,
+        previous_investors: formData.previousInvestors,
+        investment_timeline: formData.investmentTimeline,
+        intellectual_property: Array.isArray(formData.intellectualProperty) ? formData.intellectualProperty : [],
+        social_mission: formData.socialMission,
+        impact_metrics: formData.impactMetrics,
+        sdg_alignment: Array.isArray(formData.sdgAlignment) ? formData.sdgAlignment : [],
+        beneficiaries: formData.beneficiaries,
+        regulatory_compliance: formData.regulatoryCompliance,
+        data_privacy_compliance: formData.dataPrivacyCompliance,
+        preferred_contact_method: formData.preferredContactMethod,
+        best_time_to_contact: formData.bestTimeToContact,
+        demo_video: formData.demoVideo,
+        press_coverage: formData.pressCoverage,
+        awards_recognition: formData.awardsRecognition,
+        partnerships: formData.partnerships
+      };
+
+      const url = isEdit ? `${API_BASE}/api/v1/projects/${projectId}` : `${API_BASE}/api/v1/projects`;
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(projectData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Success - redirect to projects page
     router.push('/projects');
+      
+    } catch (error) {
+      console.error('Error submitting project:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit project. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const nextStep = () => {
@@ -1373,6 +1581,27 @@ export default function AddStartupPage() {
   );
 
   return (
+    <>
+      <style jsx>{`
+        .startup-form-error {
+          background: #fee2e2;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+          color: #dc2626;
+        }
+        .startup-form-error p {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .startup-form-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      `}</style>
+      
     <div className="startup-form-wrap">
       <div className="startup-form-header">
         <button className="startup-form-back-btn" onClick={() => router.back()}>
@@ -1399,23 +1628,44 @@ export default function AddStartupPage() {
         {currentStep === 5 && renderStep5()}
         {currentStep === 6 && renderStep6()}
 
+        {submitError && (
+          <div className="startup-form-error">
+            <p>{submitError}</p>
+          </div>
+        )}
+
         <div className="startup-form-actions">
           {currentStep > 1 && (
-            <button type="button" onClick={prevStep} className="startup-form-btn startup-form-btn-secondary">
+            <button 
+              type="button" 
+              onClick={prevStep} 
+              className="startup-form-btn startup-form-btn-secondary"
+              disabled={isSubmitting}
+            >
               Previous
             </button>
           )}
           {currentStep < totalSteps ? (
-            <button type="button" onClick={nextStep} className="startup-form-btn startup-form-btn-primary">
+            <button 
+              type="button" 
+              onClick={nextStep} 
+              className="startup-form-btn startup-form-btn-primary"
+              disabled={isSubmitting}
+            >
               Next
             </button>
           ) : (
-            <button type="submit" className="startup-form-btn startup-form-btn-primary">
-              Submit Application
+            <button 
+              type="submit" 
+              className="startup-form-btn startup-form-btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : (isEdit ? 'Update Project' : 'Submit Application')}
             </button>
           )}
         </div>
       </form>
     </div>
+    </>
   );
 }

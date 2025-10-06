@@ -5,7 +5,7 @@ import { authenticate, authorize } from '../../core/http/auth.js';
 const router = Router();
 
 // Card DTOs for frontend projects grid/modal
-router.get('/cards', authenticate, ctrl.listCards);
+router.get('/cards', ctrl.listCards);
 router.get('/pending', authenticate, authorize('admin','superadmin'), ctrl.listPending);
 router.post('/:id/review', authenticate, authorize('admin','superadmin'), ctrl.review);
 router.post('/:id/assign-mentor', authenticate, authorize('admin','superadmin'), ctrl.assignMentor);
