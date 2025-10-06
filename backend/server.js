@@ -9,11 +9,14 @@ import { httpLogger } from './app/core/utils/logger.js';
 
 const app = express();
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Security and CORS must run before body parsing to ensure CORS headers on failures
+buildSecurity(app);
+
+// Increase payload limits to support larger submissions (e.g., rich descriptions, images as data URLs)
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 app.use(httpLogger);
-buildSecurity(app);
 
 app.use('/api/v1', router);
 app.use(errorHandler);
@@ -21,7 +24,7 @@ app.use(errorHandler);
 async function start() {
   try {
     await sequelize.authenticate();
-    // Sync only in development; in production use migrations
+    // Avoid alter sync to prevent deadlocks; run migrations instead
     if (env.nodeEnv === 'development') {
       await sequelize.sync({ alter: false });
     }

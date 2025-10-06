@@ -1,5 +1,6 @@
 import { Opportunity } from './model.js';
-import httpLogger from '../../core/utils/logger.js';
+import { env } from '../../../config/env.js';
+// Use console for error logging in controllers
 import { Op } from 'sequelize';
 
 // Get all opportunities
@@ -48,7 +49,7 @@ const getOpportunities = async (req, res) => {
       }
     });
   } catch (error) {
-    httpLogger.error('Error fetching opportunities:', error);
+    console.error('Error fetching opportunities:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch opportunities'
@@ -73,10 +74,15 @@ const createOpportunity = async (req, res) => {
       message: 'Opportunity created successfully'
     });
   } catch (error) {
-    httpLogger.error('Error creating opportunity:', error);
-    res.status(500).json({
+    console.error('Error creating opportunity:', error);
+    const devDetails = env.nodeEnv === 'development' ? {
+      error: String(error?.message || error),
+      details: error?.errors || error?.parent?.sqlMessage || undefined
+    } : {};
+    res.status(400).json({
       success: false,
-      message: 'Failed to create opportunity'
+      message: 'Failed to create opportunity',
+      ...devDetails
     });
   }
 };
@@ -105,7 +111,7 @@ const updateOpportunity = async (req, res) => {
       message: 'Opportunity updated successfully'
     });
   } catch (error) {
-    httpLogger.error('Error updating opportunity:', error);
+    console.error('Error updating opportunity:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update opportunity'
@@ -133,7 +139,7 @@ const deleteOpportunity = async (req, res) => {
       message: 'Opportunity deleted successfully'
     });
   } catch (error) {
-    httpLogger.error('Error deleting opportunity:', error);
+    console.error('Error deleting opportunity:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete opportunity'

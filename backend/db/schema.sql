@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   location VARCHAR(191) NOT NULL,
   type ENUM('Funding Round','Partnership','Investment','Acquisition','Merger') NOT NULL,
   industry VARCHAR(128) NOT NULL,
+  industries JSON NULL,
   deadline DATETIME NOT NULL,
   postedDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   image VARCHAR(512) NULL,
@@ -277,6 +278,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   equity VARCHAR(32) NULL,
   tags JSON NULL,
   investors JSON NULL,
+  eligibility JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;

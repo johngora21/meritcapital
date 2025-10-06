@@ -2865,6 +2865,21 @@ body { font-family: 'Poppins', sans-serif; }
   .startup-form-btn { width: 100%; }
 }
 
+/* Discrete input widths in two-column rows to prevent overlap on wide screens */
+.startup-form-row .startup-form-group input,
+.startup-form-row .startup-form-group select,
+.startup-form-row .startup-form-group textarea {
+  max-width: 420px;
+  min-width: 280px;
+}
+
+/* Ensure long placeholders/content do not cause overlap */
+.startup-form-group input,
+.startup-form-group select,
+.startup-form-group textarea {
+  box-sizing: border-box;
+}
+
 /* Circular ring */
 .mc-ring { --pct: 0; width: 220px; height: 220px; border-radius: 50%; background:
   conic-gradient(var(--mc-sidebar-bg) calc(var(--pct) * 1%), #e5e7eb 0);

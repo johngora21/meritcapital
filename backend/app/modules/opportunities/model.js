@@ -31,6 +31,11 @@ export const Opportunity = sequelize.define('Opportunity', {
     type: DataTypes.STRING(128),
     allowNull: false
   },
+  industries: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
   deadline: {
     type: DataTypes.DATE,
     allowNull: false
@@ -41,7 +46,7 @@ export const Opportunity = sequelize.define('Opportunity', {
     defaultValue: DataTypes.NOW
   },
   image: {
-    type: DataTypes.STRING(512),
+    type: DataTypes.TEXT('long'),
     allowNull: true
   },
   status: {
@@ -67,6 +72,11 @@ export const Opportunity = sequelize.define('Opportunity', {
     defaultValue: []
   },
   investors: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  eligibility: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: []

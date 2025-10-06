@@ -12,3 +12,4 @@ ADD COLUMN twitter VARCHAR(512) NULL AFTER linkedin;
 -- Update avatar_url column name to match frontend
 ALTER TABLE users CHANGE COLUMN avatar_url avatar VARCHAR(512) NULL;
 
+

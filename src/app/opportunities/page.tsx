@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
 
 type Opportunity = {
   id: string;
@@ -11,6 +11,7 @@ type Opportunity = {
   location: string;
   type: 'Funding Round' | 'Partnership' | 'Investment' | 'Acquisition' | 'Merger';
   industry: string;
+  industries?: string[];
   deadline: string;
   postedDate: string;
   image: string;
@@ -20,6 +21,7 @@ type Opportunity = {
   equity?: string;
   tags: string[];
   investors?: string[];
+  eligibility?: string[];
 };
 
 const industries = [
@@ -147,14 +149,16 @@ export default function OpportunitiesPage() {
   const [selectedType, setSelectedType] = React.useState("");
   const [selectedOpportunity, setSelectedOpportunity] = React.useState<Opportunity | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editingOpportunityId, setEditingOpportunityId] = React.useState<string | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const [items, setItems] = React.useState<Opportunity[]>(opportunities);
+  const [items, setItems] = React.useState<Opportunity[]>([]);
   const [newOpportunity, setNewOpportunity] = React.useState({
     title: '',
     company: '',
     description: '',
     location: '',
-    type: 'Funding Round' as const,
+    type: 'Funding Round' as Opportunity['type'],
     industry: [] as string[],
     deadline: '',
     amount: '',
@@ -162,17 +166,28 @@ export default function OpportunitiesPage() {
     equity: '',
     tags: [] as string[],
     investors: [] as string[],
-    image: ''
+    image: '',
+    eligibility: [] as string[]
   });
   const [newTag, setNewTag] = React.useState('');
   const [newInvestor, setNewInvestor] = React.useState('');
+  const [eligibilityText, setEligibilityText] = React.useState('');
   const [showIndustryDropdown, setShowIndustryDropdown] = React.useState(false);
 
   React.useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/opportunities`, { credentials: 'include' });
+        const json = await res.json().catch(() => ({}));
+        setItems(Array.isArray(json?.data) ? json.data : []);
+      } catch {}
+    };
+    loadItems();
+
     const loadRole = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-        const res = await fetch(`${API}/auth/me`, {
+        const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           credentials: 'include'
         });
@@ -238,6 +253,53 @@ export default function OpportunitiesPage() {
     setSelectedOpportunity(null);
   };
 
+  const handleEditOpportunity = (opportunity: Opportunity) => {
+    setNewOpportunity({
+      title: opportunity.title,
+      company: opportunity.company,
+      description: opportunity.description,
+      location: opportunity.location,
+      type: opportunity.type,
+      industry: opportunity.industries || [opportunity.industry],
+      deadline: opportunity.deadline,
+      amount: opportunity.amount,
+      stage: opportunity.stage,
+      equity: opportunity.equity || '',
+      tags: opportunity.tags || [],
+      investors: opportunity.investors || [],
+      image: opportunity.image || '',
+      eligibility: opportunity.eligibility || []
+    });
+    setIsEditing(true);
+    setEditingOpportunityId(opportunity.id);
+    setShowAddModal(true);
+  };
+
+
+  const handleDeleteOpportunity = async (opportunityId: string) => {
+    if (confirm('Are you sure you want to delete this opportunity?')) {
+      try {
+        const response = await fetch(`${API_BASE}/api/v1/opportunities/${opportunityId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          setItems(prev => prev.filter(opp => opp.id !== opportunityId));
+          if (selectedOpportunity?.id === opportunityId) {
+            setSelectedOpportunity(null);
+          }
+        } else {
+          console.error('Failed to delete opportunity');
+          alert('Failed to delete opportunity. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting opportunity:', error);
+        alert('Error deleting opportunity. Please try again.');
+      }
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Open': return 'var(--mc-sidebar-bg)';
@@ -258,16 +320,20 @@ export default function OpportunitiesPage() {
   const handleAddOpportunity = async () => {
     try {
       const opportunityData = {
-        id: Date.now().toString(),
         ...newOpportunity,
         industry: newOpportunity.industry[0] || '',
-        postedDate: new Date().toISOString().split('T')[0],
+        industries: newOpportunity.industry,
+        postedDate: isEditing && editingOpportunityId ? items.find(opp => opp.id === editingOpportunityId)?.postedDate || new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         image: newOpportunity.image || "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80&auto=format&fit=crop",
+        eligibility: eligibilityText.split(/\r?\n/).map(s => s.trim()).filter(Boolean),
         status: "Open" as const
       } as Opportunity;
 
-      const response = await fetch('/api/v1/opportunities', {
-        method: 'POST',
+      const url = isEditing && editingOpportunityId ? `${API_BASE}/api/v1/opportunities/${editingOpportunityId}` : `${API_BASE}/api/v1/opportunities`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -276,17 +342,27 @@ export default function OpportunitiesPage() {
       });
 
       if (response.ok) {
-        // Prefer server-returned entity if available
         const returned = await response.json().catch(() => null);
-        const created: Opportunity | null = returned?.data ? returned.data : null;
-        setItems((prev) => [...prev, (created as any) || opportunityData]);
+        const opportunity: Opportunity | null = returned?.data ? returned.data : null;
+        
+        if (isEditing && editingOpportunityId) {
+          setItems((prev) => prev.map(opp => 
+            opp.id === editingOpportunityId ? (opportunity || opportunityData) : opp
+          ));
+        } else {
+          setItems((prev) => [opportunity || opportunityData, ...prev]);
+        }
+        
         setShowAddModal(false);
+        setIsEditing(false);
+        setEditingOpportunityId(null);
+        setSelectedOpportunity(null);
         setNewOpportunity({
           title: '',
           company: '',
           description: '',
           location: '',
-          type: 'Funding Round' as const,
+          type: 'Funding Round' as Opportunity['type'],
           industry: [],
           deadline: '',
           amount: '',
@@ -294,15 +370,17 @@ export default function OpportunitiesPage() {
           equity: '',
           tags: [],
           investors: [],
-          image: ''
+          image: '',
+          eligibility: []
         });
         setNewTag('');
         setNewInvestor('');
+        setEligibilityText('');
       } else {
-        console.error('Failed to add opportunity');
+        console.error(`Failed to ${isEditing ? 'update' : 'add'} opportunity`);
       }
     } catch (error) {
-      console.error('Error adding opportunity:', error);
+      console.error(`Error ${isEditing ? 'updating' : 'adding'} opportunity:`, error);
     }
   };
 
@@ -313,16 +391,18 @@ export default function OpportunitiesPage() {
         
         .opp-head { 
           display: flex; flex-direction: column; gap: 8px;
-          padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; 
+          padding-bottom: 16px; 
         }
         .opp-head h2 { margin: 0; font-size: 28px; font-weight: 800; color: #111827; }
         .opp-head p { margin: 0; color: #6b7280; font-size: 14px; }
         
         .opp-toolbar { 
-          display: flex; justify-content: space-between; align-items: center; 
+          display: flex; justify-content: flex-end; align-items: flex-start; 
           gap: 16px; flex-wrap: wrap; 
+          flex-direction: column;
+          align-items: flex-end;
         }
-        .opp-filters { display: flex; gap: 12px; flex-wrap: wrap; }
+        .opp-filters { display: flex; gap: 12px; flex-wrap: wrap; order: 1; margin-top: 16px; }
         
         .opp-search, .opp-industry-filter, .opp-type-filter {
           padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;
@@ -338,6 +418,14 @@ export default function OpportunitiesPage() {
           transition: background-color 0.2s;
         }
         .opp-add-btn:hover { background: var(--mc-sidebar-bg-hover); }
+
+        /* Ensure the actual rendered button (proj-add-btn) aligns to the top too */
+        .proj-add-btn {
+          padding: 10px 20px; background: var(--mc-sidebar-bg); color: white; border: none;
+          border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: background-color 0.2s; align-self: flex-end; order: 0;
+        }
+        .proj-add-btn:hover { background: var(--mc-sidebar-bg-hover); }
         
         .opp-grid { 
           display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
@@ -353,9 +441,9 @@ export default function OpportunitiesPage() {
           transform: translateY(-2px);
         }
         
-        .opp-card-header { position: relative; height: 120px; overflow: hidden; }
+        .opp-card-header { position: relative; height: 200px; overflow: hidden; }
         .opp-image { width: 100%; height: 100%; }
-        .opp-image img { width: 100%; height: 100%; object-fit: cover; }
+        .opp-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
         
         .opp-card-body { padding: 16px; }
         .opp-card-title { 
@@ -390,6 +478,53 @@ export default function OpportunitiesPage() {
           border-radius: 4px; font-size: 12px; font-weight: 500;
         }
         
+        .opp-industries {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 12px;
+        }
+        .opp-industry-tag {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        
+        .opp-admin-actions {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          display: flex;
+          gap: 4px;
+          z-index: 10;
+        }
+        .opp-edit-btn, .opp-delete-btn {
+          background: rgba(0, 0, 0, 0.6);
+          border: none;
+          color: white;
+          padding: 6px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s;
+        }
+        .opp-edit-btn:hover {
+          background: rgba(0, 0, 0, 0.8);
+        }
+        .opp-delete-btn {
+          background: rgba(220, 38, 38, 0.8);
+          color: white;
+        }
+        .opp-delete-btn:hover {
+          background: rgba(185, 28, 28, 0.9);
+        }
+        
         .opp-modal-overlay { 
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           background: rgba(0,0,0,0.8); z-index: 1000;
@@ -398,8 +533,8 @@ export default function OpportunitiesPage() {
         }
         
         .opp-modal { 
-          background: white; border-radius: 12px; max-width: 600px; 
-          width: 100%; max-height: 80vh; overflow: hidden;
+          background: white; border-radius: 12px; max-width: 720px; 
+          width: 100%; max-height: 95vh; overflow: hidden;
           position: relative;
         }
         
@@ -595,8 +730,34 @@ export default function OpportunitiesPage() {
           <div key={opp.id} className="opp-card" onClick={() => openModal(opp)}>
             <div className="opp-card-header">
               <div className="opp-image">
-                <img src={opp.image} alt={opp.company} />
+                <img src={opp.image || "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80&auto=format&fit=crop"} alt={opp.company} />
               </div>
+              {isAdmin && (
+                <div className="opp-admin-actions" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    className="opp-edit-btn"
+                    onClick={() => handleEditOpportunity(opp)}
+                    title="Edit Opportunity"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button 
+                    className="opp-delete-btn"
+                    onClick={() => handleDeleteOpportunity(opp.id)}
+                    title="Delete Opportunity"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="opp-card-body">
@@ -615,14 +776,15 @@ export default function OpportunitiesPage() {
                 </div>
               </div>
 
-              <div className="opp-tags">
-                {opp.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="opp-tag">{tag}</span>
-                ))}
-                {opp.tags.length > 3 && (
-                  <span className="opp-tag">+{opp.tags.length - 3} more</span>
-                )}
-              </div>
+              {(opp.industries && opp.industries.length > 0) && (
+                <div className="opp-industries">
+                  {opp.industries.map((ind) => (
+                    <span key={ind} className="opp-industry-tag">
+                      {ind}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="opp-card-footer">
@@ -641,21 +803,15 @@ export default function OpportunitiesPage() {
         <div className="opp-modal-overlay" onClick={closeModal}>
           <div className="opp-modal" onClick={(e) => e.stopPropagation()}>
             <button className="opp-modal-close" onClick={closeModal}>×</button>
+            <div className="opp-modal-image" style={{height: '28vh'}}>
+              <img src={selectedOpportunity.image || "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80&auto=format&fit=crop"} alt={selectedOpportunity.company} />
+            </div>
             <div className="opp-modal-content">
-              <div className="opp-modal-header">
-                <div className="opp-modal-image">
-                  <img src={selectedOpportunity.image} alt={selectedOpportunity.company} />
-                </div>
-              </div>
-              
               <div className="opp-modal-body">
                 <div className="opp-modal-header-info">
                   <h2 className="opp-modal-title">{selectedOpportunity.title}</h2>
                   <p className="opp-modal-company">{selectedOpportunity.company}</p>
                 </div>
-                
-                <p className="opp-modal-description">{selectedOpportunity.description}</p>
-                
                 <div className="opp-modal-details">
                   <div className="opp-modal-section">
                     <h3>Investment Details</h3>
@@ -696,6 +852,37 @@ export default function OpportunitiesPage() {
                     </div>
                   )}
 
+                  {selectedOpportunity.industries && selectedOpportunity.industries.length > 0 && (
+                    <div className="opp-modal-section">
+                      <h3>Industries</h3>
+                      <div className="opp-modal-tags">
+                        {selectedOpportunity.industries.map((ind) => (
+                          <span key={ind} className="opp-modal-tag">{ind}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description below Current Investors */}
+                  {selectedOpportunity.description && (
+                    <div className="opp-modal-section">
+                      <h3>Description</h3>
+                      <p className="opp-modal-description">{selectedOpportunity.description}</p>
+                    </div>
+                  )}
+
+                  {/* Eligibility below Description */}
+                  {Array.isArray(selectedOpportunity.eligibility) && selectedOpportunity.eligibility.length > 0 && (
+                    <div className="opp-modal-section">
+                      <h3>Eligibility</h3>
+                      <ul className="opp-eligibility-list">
+                        {selectedOpportunity.eligibility.map((rule, idx) => (
+                          <li key={idx} className="opp-eligibility-item">{rule}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="opp-modal-section">
                     <h3>Tags</h3>
                     <div className="opp-modal-tags">
@@ -724,12 +911,12 @@ export default function OpportunitiesPage() {
 
       {/* Add Opportunity Modal */}
       {showAddModal && (
-        <div className="opp-modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div className="opp-modal-overlay" onClick={() => { setShowAddModal(false); setIsEditing(false); setEditingOpportunityId(null); }}>
           <div className="opp-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="opp-modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            <button className="opp-modal-close" onClick={() => { setShowAddModal(false); setIsEditing(false); setEditingOpportunityId(null); }}>×</button>
             <div className="opp-modal-content">
               <div className="opp-modal-header">
-                <h2>Add New Opportunity</h2>
+                <h2>{isEditing ? 'Edit Opportunity' : 'Add New Opportunity'}</h2>
               </div>
               
               <div className="opp-modal-body">
@@ -753,16 +940,6 @@ export default function OpportunitiesPage() {
                         placeholder="e.g., TechStart Africa"
                       />
                     </div>
-                  </div>
-
-                  <div className="opp-form-group">
-                    <label>Description *</label>
-                    <textarea
-                      value={newOpportunity.description}
-                      onChange={(e) => setNewOpportunity({...newOpportunity, description: e.target.value})}
-                      placeholder="Describe the opportunity..."
-                      rows={3}
-                    />
                   </div>
 
                   <div className="opp-form-row">
@@ -882,6 +1059,41 @@ export default function OpportunitiesPage() {
                   </div>
 
                   <div className="opp-form-group">
+                    <label>Description *</label>
+                    <textarea
+                      value={newOpportunity.description}
+                      onChange={(e) => setNewOpportunity({...newOpportunity, description: e.target.value})}
+                      placeholder="Describe the opportunity..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="opp-form-group">
+                    <label>Eligibility</label>
+                    <textarea
+                      value={eligibilityText}
+                      onChange={(e) => setEligibilityText(e.target.value)}
+                      placeholder="Enter eligibility rules (one per line)"
+                      rows={3}
+                    />
+                    {newOpportunity.eligibility && newOpportunity.eligibility.length > 0 && (
+                      <div className="opp-eligibility-display">
+                        {newOpportunity.eligibility.map((rule, index) => (
+                          <span key={index} className="opp-eligibility-item">
+                            {rule}
+                            <button type="button" className="opp-remove-eligibility" onClick={() => {
+                              setNewOpportunity({
+                                ...newOpportunity,
+                                eligibility: newOpportunity.eligibility.filter(r => r !== rule)
+                              });
+                            }}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="opp-form-group">
                     <label>Tags</label>
                     <div className="opp-tag-input-group">
                       <input
@@ -966,7 +1178,7 @@ export default function OpportunitiesPage() {
               <div className="opp-modal-footer">
                 <button 
                   className="opp-modal-btn opp-modal-btn--secondary"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setIsEditing(false); setEditingOpportunityId(null); }}
                 >
                   Cancel
                 </button>
@@ -974,13 +1186,14 @@ export default function OpportunitiesPage() {
                   className="opp-modal-btn opp-modal-btn--primary"
                   onClick={handleAddOpportunity}
                 >
-                  Add Opportunity
+                  {isEditing ? 'Update Opportunity' : 'Add Opportunity'}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
     </>
   );

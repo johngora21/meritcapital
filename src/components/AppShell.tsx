@@ -22,7 +22,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = React.useState<CurrentUser>(null);
-  const API_BASE = '';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
   const isAuthPage = pathname === '/authentication/login' || pathname?.startsWith('/authentication');
 
   React.useEffect(() => {
