@@ -6,9 +6,11 @@ import { ArrowLeft } from 'lucide-react';
 type FormData = {
   // Basic Information
   startupName: string;
+  projectTitle: string;
   tagline: string;
   description: string;
   website: string;
+  imageUrl: string;
   logo: File | null;
   
   // Founder Information
@@ -99,6 +101,8 @@ type FormData = {
   // Additional Information
   pitchDeck: File | null;
   businessPlan: File | null;
+  pitchDeckName?: string;
+  businessPlanName?: string;
   demoVideo: string;
   pressCoverage: string;
   awardsRecognition: string;
@@ -160,12 +164,9 @@ const fundingStages = [
 ];
 
 const productTypes = [
-  "Software/SaaS",
-  "Mobile App",
-  "E-commerce",
-  "Physical Product",
   "Service",
-  "Platform",
+  "Physical Product",
+  "Software/App",
   "Other"
 ];
 
@@ -247,9 +248,11 @@ export default function AddStartupPage() {
   const projectId = searchParams.get('id');
   const [formData, setFormData] = React.useState<FormData>({
     startupName: '',
+    projectTitle: '',
     tagline: '',
     description: '',
     website: '',
+    imageUrl: '',
     logo: null,
     founderName: '',
     founderRole: '',
@@ -304,6 +307,8 @@ export default function AddStartupPage() {
     beneficiaries: '',
     pitchDeck: null,
     businessPlan: null,
+    pitchDeckName: '',
+    businessPlanName: '',
     demoVideo: '',
     pressCoverage: '',
     awardsRecognition: '',
@@ -334,6 +339,11 @@ export default function AddStartupPage() {
           });
           
           if (!response.ok) {
+            // If unauthorized, redirect to login
+            if (response.status === 401) {
+              router.push('/authentication/login');
+              return;
+            }
             throw new Error(`Failed to load project: ${response.status} ${response.statusText}`);
           }
           
@@ -345,9 +355,11 @@ export default function AddStartupPage() {
             console.log('Setting form data with:', data);
             setFormData({
               startupName: data.name || '',
+              projectTitle: data.project_title || '',
               tagline: data.tagline || '',
               description: data.description || '',
               website: data.website || '',
+              imageUrl: data.image_url || '',
               logo: null,
               founderName: data.founder_name || '',
               founderRole: data.founder_role || '',
@@ -355,8 +367,22 @@ export default function AddStartupPage() {
               founderPhone: data.founder_phone || '',
               founderLinkedin: data.founder_linkedin || '',
               teamSize: data.employees || '',
-              teamMembers: [],
-              coFounders: [],
+              teamMembers: (() => {
+                try {
+                  return data.team_members ? JSON.parse(data.team_members) : [];
+                } catch (e) {
+                  console.log('Error parsing team_members:', e, data.team_members);
+                  return [];
+                }
+              })(),
+              coFounders: (() => {
+                try {
+                  return data.co_founders ? JSON.parse(data.co_founders) : [];
+                } catch (e) {
+                  console.log('Error parsing co_founders:', e, data.co_founders);
+                  return [];
+                }
+              })(),
               industry: data.industry || '',
               businessStage: data.stage || '',
               foundedDate: data.founded || '',
@@ -366,8 +392,16 @@ export default function AddStartupPage() {
               headquartersCountry: data.headquarters_country || '',
               headquartersCity: data.headquarters_city || '',
               primaryMarket: data.primary_market || '',
-              targetMarkets: Array.isArray(data.target_markets) ? data.target_markets : [],
-              operatingCountries: Array.isArray(data.operating_countries) ? data.operating_countries : [],
+              targetMarkets: Array.isArray(data.target_markets)
+                ? data.target_markets
+                : (typeof data.target_markets === 'string'
+                    ? data.target_markets.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : []),
+              operatingCountries: Array.isArray(data.operating_countries)
+                ? data.operating_countries
+                : (typeof data.operating_countries === 'string'
+                    ? data.operating_countries.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : []),
               problemStatement: data.problem_statement || '',
               solutionDescription: data.solution_description || '',
               keyFeatures: data.key_features || '',
@@ -382,20 +416,33 @@ export default function AddStartupPage() {
               monthlyActiveUsers: data.monthly_active_users || '',
               revenueGrowthRate: data.revenue_growth_rate || '',
               keyPerformanceIndicators: data.key_performance_indicators || '',
+              currentRevenue: data.revenue_text || '',
               fundingStage: data.funding_stage || '',
               fundingRaised: data.funding_raised || '',
               monthlyBurnRate: data.monthly_burn_rate || '',
               runway: data.runway || '',
-              productType: Array.isArray(data.product_type) ? data.product_type : [],
+              productType: Array.isArray(data.product_type)
+                ? data.product_type
+                : (typeof data.product_type === 'string'
+                    ? data.product_type.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : []),
               seekingInvestment: data.seeking_investment || '',
               investmentAmountNeeded: data.investment_amount_needed || '',
               useOfFunds: data.use_of_funds || '',
               previousInvestors: data.previous_investors || '',
               investmentTimeline: data.investment_timeline || '',
-              intellectualProperty: Array.isArray(data.intellectual_property) ? data.intellectual_property : [],
+              intellectualProperty: Array.isArray(data.intellectual_property)
+                ? data.intellectual_property
+                : (typeof data.intellectual_property === 'string'
+                    ? data.intellectual_property.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : []),
               socialMission: data.social_mission || '',
               impactMetrics: data.impact_metrics || '',
-              sdgAlignment: Array.isArray(data.sdg_alignment) ? data.sdg_alignment : [],
+              sdgAlignment: Array.isArray(data.sdg_alignment)
+                ? data.sdg_alignment
+                : (typeof data.sdg_alignment === 'string'
+                    ? data.sdg_alignment.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    : []),
               beneficiaries: data.beneficiaries || '',
               regulatoryCompliance: data.regulatory_compliance || '',
               dataPrivacyCompliance: data.data_privacy_compliance || '',
@@ -405,6 +452,8 @@ export default function AddStartupPage() {
               pressCoverage: data.press_coverage || '',
               awardsRecognition: data.awards_recognition || '',
               partnerships: data.partnerships || '',
+              pitchDeckName: data.pitch_deck_name || '',
+              businessPlanName: data.business_plan_name || '',
               newsletterSubscription: false,
               marketingCommunications: false
             });
@@ -507,6 +556,16 @@ export default function AddStartupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Don't submit if we're not on the final step
+    if (currentStep < totalSteps) {
+      console.log('Preventing form submission - not on final step. Current step:', currentStep, 'Total steps:', totalSteps);
+      nextStep();
+      return false;
+    }
+    
+    console.log('Submitting form - on final step:', currentStep);
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -514,10 +573,11 @@ export default function AddStartupPage() {
       // Transform form data to match backend schema
       const projectData = {
         name: formData.startupName,
+        project_title: formData.projectTitle,
         description: formData.description,
         stage: formData.businessStage,
         industry: formData.industry,
-        image_url: '', // Will be handled separately for file uploads
+        image_url: formData.imageUrl || '',
         founded: formData.foundedDate,
         employees: formData.teamSize,
         revenue_text: formData.currentRevenue,
@@ -543,8 +603,9 @@ export default function AddStartupPage() {
         registration_number: formData.registrationNumber,
         tax_id: formData.taxId,
         primary_market: formData.primaryMarket,
-        target_markets: Array.isArray(formData.targetMarkets) ? formData.targetMarkets : [],
-        operating_countries: Array.isArray(formData.operatingCountries) ? formData.operatingCountries : [],
+        target_markets: Array.isArray(formData.targetMarkets) ? 
+          (formData.targetMarkets.length === 1 ? formData.targetMarkets[0] : formData.targetMarkets.join(', ')) : '',
+        operating_countries: Array.isArray(formData.operatingCountries) ? formData.operatingCountries.join(', ') : '',
         problem_statement: formData.problemStatement,
         solution_description: formData.solutionDescription,
         key_features: formData.keyFeatures,
@@ -563,16 +624,16 @@ export default function AddStartupPage() {
         funding_raised: formData.fundingRaised,
         monthly_burn_rate: formData.monthlyBurnRate,
         runway: formData.runway,
-        product_type: Array.isArray(formData.productType) ? formData.productType : [],
+        product_type: Array.isArray(formData.productType) ? formData.productType.join(', ') : '',
         seeking_investment: formData.seekingInvestment,
         investment_amount_needed: formData.investmentAmountNeeded,
         use_of_funds: formData.useOfFunds,
         previous_investors: formData.previousInvestors,
         investment_timeline: formData.investmentTimeline,
-        intellectual_property: Array.isArray(formData.intellectualProperty) ? formData.intellectualProperty : [],
+        intellectual_property: Array.isArray(formData.intellectualProperty) ? formData.intellectualProperty.join(', ') : '',
         social_mission: formData.socialMission,
         impact_metrics: formData.impactMetrics,
-        sdg_alignment: Array.isArray(formData.sdgAlignment) ? formData.sdgAlignment : [],
+        sdg_alignment: Array.isArray(formData.sdgAlignment) ? formData.sdgAlignment.join(', ') : '',
         beneficiaries: formData.beneficiaries,
         regulatory_compliance: formData.regulatoryCompliance,
         data_privacy_compliance: formData.dataPrivacyCompliance,
@@ -581,23 +642,36 @@ export default function AddStartupPage() {
         demo_video: formData.demoVideo,
         press_coverage: formData.pressCoverage,
         awards_recognition: formData.awardsRecognition,
-        partnerships: formData.partnerships
+        partnerships: formData.partnerships,
+        pitch_deck_name: formData.pitchDeck?.name || formData.pitchDeckName || '',
+        business_plan_name: formData.businessPlan?.name || formData.businessPlanName || '',
+        co_founders: JSON.stringify(formData.coFounders),
+        team_members: JSON.stringify(formData.teamMembers)
       };
 
       const url = isEdit ? `${API_BASE}/api/v1/projects/${projectId}` : `${API_BASE}/api/v1/projects`;
       const method = isEdit ? 'PUT' : 'POST';
       
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify(projectData)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // If unauthorized, redirect to login
+        if (response.status === 401) {
+          router.push('/authentication/login');
+          return;
+        }
+        
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
@@ -641,6 +715,16 @@ export default function AddStartupPage() {
           />
         </div>
         <div className="startup-form-group">
+          <label>Project Title *</label>
+          <input
+            type="text"
+            value={formData.projectTitle}
+            onChange={(e) => handleInputChange('projectTitle', e.target.value)}
+            placeholder="Enter your project title"
+            required
+          />
+        </div>
+        <div className="startup-form-group">
           <label>Tagline/Slogan</label>
           <input
             type="text"
@@ -655,13 +739,209 @@ export default function AddStartupPage() {
       <div className="startup-form-row">
         <div className="startup-form-group">
           <label>Headquarters Country *</label>
-          <input
-            type="text"
+          <select
             value={formData.headquartersCountry}
             onChange={(e) => handleInputChange('headquartersCountry', e.target.value)}
-            placeholder="e.g., Kenya"
             required
-          />
+          >
+            <option value="">Select a country</option>
+            <option value="Afghanistan">Afghanistan</option>
+            <option value="Albania">Albania</option>
+            <option value="Algeria">Algeria</option>
+            <option value="Andorra">Andorra</option>
+            <option value="Angola">Angola</option>
+            <option value="Antigua and Barbuda">Antigua and Barbuda</option>
+            <option value="Argentina">Argentina</option>
+            <option value="Armenia">Armenia</option>
+            <option value="Australia">Australia</option>
+            <option value="Austria">Austria</option>
+            <option value="Azerbaijan">Azerbaijan</option>
+            <option value="Bahamas">Bahamas</option>
+            <option value="Bahrain">Bahrain</option>
+            <option value="Bangladesh">Bangladesh</option>
+            <option value="Barbados">Barbados</option>
+            <option value="Belarus">Belarus</option>
+            <option value="Belgium">Belgium</option>
+            <option value="Belize">Belize</option>
+            <option value="Benin">Benin</option>
+            <option value="Bhutan">Bhutan</option>
+            <option value="Bolivia">Bolivia</option>
+            <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+            <option value="Botswana">Botswana</option>
+            <option value="Brazil">Brazil</option>
+            <option value="Brunei">Brunei</option>
+            <option value="Bulgaria">Bulgaria</option>
+            <option value="Burkina Faso">Burkina Faso</option>
+            <option value="Burundi">Burundi</option>
+            <option value="Cabo Verde">Cabo Verde</option>
+            <option value="Cambodia">Cambodia</option>
+            <option value="Cameroon">Cameroon</option>
+            <option value="Canada">Canada</option>
+            <option value="Central African Republic">Central African Republic</option>
+            <option value="Chad">Chad</option>
+            <option value="Chile">Chile</option>
+            <option value="China">China</option>
+            <option value="Colombia">Colombia</option>
+            <option value="Comoros">Comoros</option>
+            <option value="Congo">Congo</option>
+            <option value="Costa Rica">Costa Rica</option>
+            <option value="Croatia">Croatia</option>
+            <option value="Cuba">Cuba</option>
+            <option value="Cyprus">Cyprus</option>
+            <option value="Czech Republic">Czech Republic</option>
+            <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
+            <option value="Denmark">Denmark</option>
+            <option value="Djibouti">Djibouti</option>
+            <option value="Dominica">Dominica</option>
+            <option value="Dominican Republic">Dominican Republic</option>
+            <option value="East Timor">East Timor</option>
+            <option value="Ecuador">Ecuador</option>
+            <option value="Egypt">Egypt</option>
+            <option value="El Salvador">El Salvador</option>
+            <option value="Equatorial Guinea">Equatorial Guinea</option>
+            <option value="Eritrea">Eritrea</option>
+            <option value="Estonia">Estonia</option>
+            <option value="Eswatini">Eswatini</option>
+            <option value="Ethiopia">Ethiopia</option>
+            <option value="Fiji">Fiji</option>
+            <option value="Finland">Finland</option>
+            <option value="France">France</option>
+            <option value="Gabon">Gabon</option>
+            <option value="Gambia">Gambia</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Germany">Germany</option>
+            <option value="Ghana">Ghana</option>
+            <option value="Greece">Greece</option>
+            <option value="Grenada">Grenada</option>
+            <option value="Guatemala">Guatemala</option>
+            <option value="Guinea">Guinea</option>
+            <option value="Guinea-Bissau">Guinea-Bissau</option>
+            <option value="Guyana">Guyana</option>
+            <option value="Haiti">Haiti</option>
+            <option value="Honduras">Honduras</option>
+            <option value="Hungary">Hungary</option>
+            <option value="Iceland">Iceland</option>
+            <option value="India">India</option>
+            <option value="Indonesia">Indonesia</option>
+            <option value="Iran">Iran</option>
+            <option value="Iraq">Iraq</option>
+            <option value="Ireland">Ireland</option>
+            <option value="Israel">Israel</option>
+            <option value="Italy">Italy</option>
+            <option value="Ivory Coast">Ivory Coast</option>
+            <option value="Jamaica">Jamaica</option>
+            <option value="Japan">Japan</option>
+            <option value="Jordan">Jordan</option>
+            <option value="Kazakhstan">Kazakhstan</option>
+            <option value="Kenya">Kenya</option>
+            <option value="Kiribati">Kiribati</option>
+            <option value="Kuwait">Kuwait</option>
+            <option value="Kyrgyzstan">Kyrgyzstan</option>
+            <option value="Laos">Laos</option>
+            <option value="Latvia">Latvia</option>
+            <option value="Lebanon">Lebanon</option>
+            <option value="Lesotho">Lesotho</option>
+            <option value="Liberia">Liberia</option>
+            <option value="Libya">Libya</option>
+            <option value="Liechtenstein">Liechtenstein</option>
+            <option value="Lithuania">Lithuania</option>
+            <option value="Luxembourg">Luxembourg</option>
+            <option value="Madagascar">Madagascar</option>
+            <option value="Malawi">Malawi</option>
+            <option value="Malaysia">Malaysia</option>
+            <option value="Maldives">Maldives</option>
+            <option value="Mali">Mali</option>
+            <option value="Malta">Malta</option>
+            <option value="Marshall Islands">Marshall Islands</option>
+            <option value="Mauritania">Mauritania</option>
+            <option value="Mauritius">Mauritius</option>
+            <option value="Mexico">Mexico</option>
+            <option value="Micronesia">Micronesia</option>
+            <option value="Moldova">Moldova</option>
+            <option value="Monaco">Monaco</option>
+            <option value="Mongolia">Mongolia</option>
+            <option value="Montenegro">Montenegro</option>
+            <option value="Morocco">Morocco</option>
+            <option value="Mozambique">Mozambique</option>
+            <option value="Myanmar">Myanmar</option>
+            <option value="Namibia">Namibia</option>
+            <option value="Nauru">Nauru</option>
+            <option value="Nepal">Nepal</option>
+            <option value="Netherlands">Netherlands</option>
+            <option value="New Zealand">New Zealand</option>
+            <option value="Nicaragua">Nicaragua</option>
+            <option value="Niger">Niger</option>
+            <option value="Nigeria">Nigeria</option>
+            <option value="North Korea">North Korea</option>
+            <option value="North Macedonia">North Macedonia</option>
+            <option value="Norway">Norway</option>
+            <option value="Oman">Oman</option>
+            <option value="Pakistan">Pakistan</option>
+            <option value="Palau">Palau</option>
+            <option value="Palestine">Palestine</option>
+            <option value="Panama">Panama</option>
+            <option value="Papua New Guinea">Papua New Guinea</option>
+            <option value="Paraguay">Paraguay</option>
+            <option value="Peru">Peru</option>
+            <option value="Philippines">Philippines</option>
+            <option value="Poland">Poland</option>
+            <option value="Portugal">Portugal</option>
+            <option value="Qatar">Qatar</option>
+            <option value="Romania">Romania</option>
+            <option value="Russia">Russia</option>
+            <option value="Rwanda">Rwanda</option>
+            <option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option>
+            <option value="Saint Lucia">Saint Lucia</option>
+            <option value="Saint Vincent and the Grenadines">Saint Vincent and the Grenadines</option>
+            <option value="Samoa">Samoa</option>
+            <option value="San Marino">San Marino</option>
+            <option value="Sao Tome and Principe">Sao Tome and Principe</option>
+            <option value="Saudi Arabia">Saudi Arabia</option>
+            <option value="Senegal">Senegal</option>
+            <option value="Serbia">Serbia</option>
+            <option value="Seychelles">Seychelles</option>
+            <option value="Sierra Leone">Sierra Leone</option>
+            <option value="Singapore">Singapore</option>
+            <option value="Slovakia">Slovakia</option>
+            <option value="Slovenia">Slovenia</option>
+            <option value="Solomon Islands">Solomon Islands</option>
+            <option value="Somalia">Somalia</option>
+            <option value="South Africa">South Africa</option>
+            <option value="South Korea">South Korea</option>
+            <option value="South Sudan">South Sudan</option>
+            <option value="Spain">Spain</option>
+            <option value="Sri Lanka">Sri Lanka</option>
+            <option value="Sudan">Sudan</option>
+            <option value="Suriname">Suriname</option>
+            <option value="Sweden">Sweden</option>
+            <option value="Switzerland">Switzerland</option>
+            <option value="Syria">Syria</option>
+            <option value="Taiwan">Taiwan</option>
+            <option value="Tajikistan">Tajikistan</option>
+            <option value="Tanzania">Tanzania</option>
+            <option value="Thailand">Thailand</option>
+            <option value="Togo">Togo</option>
+            <option value="Tonga">Tonga</option>
+            <option value="Trinidad and Tobago">Trinidad and Tobago</option>
+            <option value="Tunisia">Tunisia</option>
+            <option value="Turkey">Turkey</option>
+            <option value="Turkmenistan">Turkmenistan</option>
+            <option value="Tuvalu">Tuvalu</option>
+            <option value="Uganda">Uganda</option>
+            <option value="Ukraine">Ukraine</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United States">United States</option>
+            <option value="Uruguay">Uruguay</option>
+            <option value="Uzbekistan">Uzbekistan</option>
+            <option value="Vanuatu">Vanuatu</option>
+            <option value="Vatican City">Vatican City</option>
+            <option value="Venezuela">Venezuela</option>
+            <option value="Vietnam">Vietnam</option>
+            <option value="Yemen">Yemen</option>
+            <option value="Zambia">Zambia</option>
+            <option value="Zimbabwe">Zimbabwe</option>
+          </select>
         </div>
         <div className="startup-form-group">
           <label>Headquarters City *</label>
@@ -690,7 +970,38 @@ export default function AddStartupPage() {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => handleFileChange('logo', e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              handleFileChange('logo', file);
+              if (file) {
+                // Compress image to reduce data URL size
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                  // Resize to max 400px width while maintaining aspect ratio
+                  const maxWidth = 400;
+                  const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                  canvas.width = img.width * ratio;
+                  canvas.height = img.height * ratio;
+                  
+                  ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  
+                  // Convert to data URL with 80% quality to reduce size
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                  handleInputChange('imageUrl', dataUrl);
+                };
+                
+                const reader = new FileReader();
+                reader.onload = () => {
+                  img.src = reader.result as string;
+                };
+                reader.readAsDataURL(file);
+              } else {
+                handleInputChange('imageUrl', '');
+              }
+            }}
             className="startup-form-file-input"
           />
           {formData.logo && (
@@ -706,6 +1017,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="Describe your startup in 500-1000 characters"
           rows={4}
           required
@@ -1126,6 +1443,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.problemStatement}
           onChange={(e) => handleInputChange('problemStatement', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="What problem does your startup solve? (200-500 characters)"
           rows={3}
           required
@@ -1136,6 +1459,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.solutionDescription}
           onChange={(e) => handleInputChange('solutionDescription', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="How does your startup solve this problem? (300-800 characters)"
           rows={4}
           required
@@ -1146,6 +1475,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.keyFeatures}
           onChange={(e) => handleInputChange('keyFeatures', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List your key features (one per line)"
           rows={3}
           required
@@ -1166,6 +1501,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.valueProposition}
           onChange={(e) => handleInputChange('valueProposition', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="What makes your solution unique? (100-300 characters)"
           rows={2}
           required
@@ -1207,6 +1548,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.competitiveAdvantage}
           onChange={(e) => handleInputChange('competitiveAdvantage', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="What gives you a competitive edge?"
           rows={3}
           required
@@ -1217,6 +1564,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.mainCompetitors}
           onChange={(e) => handleInputChange('mainCompetitors', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List your main competitors"
           rows={2}
         />
@@ -1238,7 +1591,20 @@ export default function AddStartupPage() {
         <input
           type="text"
           value={formData.targetMarkets.join(', ')}
-          onChange={(e) => handleInputChange('targetMarkets', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Don't process immediately, just store the raw text
+            setFormData(prev => ({
+              ...prev,
+              targetMarkets: [value] // Store as single item temporarily
+            }));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="e.g., Kenya, Uganda, Tanzania (comma separated)"
         />
       </div>
@@ -1257,6 +1623,12 @@ export default function AddStartupPage() {
             type="text"
             value={formData.customerAcquisitionCost}
             onChange={(e) => handleInputChange('customerAcquisitionCost', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < totalSteps) {
+                e.preventDefault();
+                nextStep();
+              }
+            }}
             placeholder="e.g., $50"
           />
         </div>
@@ -1266,6 +1638,12 @@ export default function AddStartupPage() {
             type="text"
             value={formData.customerLifetimeValue}
             onChange={(e) => handleInputChange('customerLifetimeValue', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < totalSteps) {
+                e.preventDefault();
+                nextStep();
+              }
+            }}
             placeholder="e.g., $500"
           />
         </div>
@@ -1278,6 +1656,12 @@ export default function AddStartupPage() {
             type="text"
             value={formData.monthlyActiveUsers}
             onChange={(e) => handleInputChange('monthlyActiveUsers', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < totalSteps) {
+                e.preventDefault();
+                nextStep();
+              }
+            }}
             placeholder="e.g., 10,000"
           />
         </div>
@@ -1287,6 +1671,12 @@ export default function AddStartupPage() {
             type="text"
             value={formData.revenueGrowthRate}
             onChange={(e) => handleInputChange('revenueGrowthRate', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < totalSteps) {
+                e.preventDefault();
+                nextStep();
+              }
+            }}
             placeholder="e.g., 20% monthly"
           />
         </div>
@@ -1297,6 +1687,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.keyPerformanceIndicators}
           onChange={(e) => handleInputChange('keyPerformanceIndicators', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List your key metrics (one per line)"
           rows={3}
         />
@@ -1308,6 +1704,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.socialMission}
           onChange={(e) => handleInputChange('socialMission', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="Describe your social impact mission"
           rows={3}
         />
@@ -1317,6 +1719,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.impactMetrics}
           onChange={(e) => handleInputChange('impactMetrics', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="How do you measure your social impact?"
           rows={2}
         />
@@ -1342,6 +1750,12 @@ export default function AddStartupPage() {
                     }));
                   }
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && currentStep < totalSteps) {
+                    e.preventDefault();
+                    nextStep();
+                  }
+                }}
               />
               <span className="startup-form-checkbox-label">{sdg}</span>
             </label>
@@ -1354,6 +1768,12 @@ export default function AddStartupPage() {
           type="text"
           value={formData.beneficiaries}
           onChange={(e) => handleInputChange('beneficiaries', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="Who benefits from your solution?"
         />
       </div>
@@ -1457,6 +1877,12 @@ export default function AddStartupPage() {
             <textarea
               value={formData.useOfFunds}
               onChange={(e) => handleInputChange('useOfFunds', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+                  e.preventDefault();
+                  nextStep();
+                }
+              }}
               placeholder="How will you use the investment?"
               rows={3}
             />
@@ -1478,6 +1904,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.previousInvestors}
           onChange={(e) => handleInputChange('previousInvestors', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List any previous investors"
           rows={2}
         />
@@ -1529,6 +1961,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.pressCoverage}
           onChange={(e) => handleInputChange('pressCoverage', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List any press coverage or media mentions"
           rows={2}
         />
@@ -1538,6 +1976,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.awardsRecognition}
           onChange={(e) => handleInputChange('awardsRecognition', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List any awards or recognition received"
           rows={2}
         />
@@ -1547,6 +1991,12 @@ export default function AddStartupPage() {
         <textarea
           value={formData.partnerships}
           onChange={(e) => handleInputChange('partnerships', e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && currentStep < totalSteps) {
+              e.preventDefault();
+              nextStep();
+            }
+          }}
           placeholder="List any key partnerships"
           rows={2}
         />
@@ -1620,7 +2070,18 @@ export default function AddStartupPage() {
         <span className="startup-form-progress-text">Step {currentStep} of {totalSteps}</span>
       </div>
 
-      <form onSubmit={handleSubmit} className="startup-form">
+      <form 
+        onSubmit={handleSubmit} 
+        className="startup-form"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && currentStep < totalSteps) {
+            e.preventDefault();
+            e.stopPropagation();
+            nextStep();
+            return false;
+          }
+        }}
+      >
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}

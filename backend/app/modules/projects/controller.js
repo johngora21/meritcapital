@@ -31,6 +31,7 @@ export default { list, get, create, update, remove };
 const mapProjectToCard = (p) => ({
   id: String(p.id),
   name: p.name,
+  project_title: p.project_title || '',
   description: p.description || '',
   stage: p.stage,
   industry: p.industry || '',
@@ -97,6 +98,24 @@ const mapProjectToCard = (p) => ({
   press_coverage: p.press_coverage || '',
   awards_recognition: p.awards_recognition || '',
   partnerships: p.partnerships || ''
+  , pitch_deck_name: p.pitch_deck_name || ''
+  , business_plan_name: p.business_plan_name || ''
+  , co_founders: (() => {
+    try {
+      return p.co_founders ? JSON.parse(p.co_founders) : [];
+    } catch (e) {
+      console.log('Error parsing co_founders:', e, p.co_founders);
+      return [];
+    }
+  })()
+  , team_members: (() => {
+    try {
+      return p.team_members ? JSON.parse(p.team_members) : [];
+    } catch (e) {
+      console.log('Error parsing team_members:', e, p.team_members);
+      return [];
+    }
+  })()
 });
 
 export const listCards = async (_req, res, next) => {
