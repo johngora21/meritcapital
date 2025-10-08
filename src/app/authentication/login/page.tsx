@@ -15,19 +15,39 @@ export default function AuthenticationLoginPage() {
     setSubmitting(true);
     setError(null);
     try {
+      // Basic client-side validation to avoid sending empty body
+      if (!email || !password) {
+        setError('Please enter your email and password');
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Login failed');
+        // Try to extract message from JSON, fallback to text, then generic
+        let message = 'Login failed';
+        try {
+          const data = await res.json();
+          message = data?.message || message;
+        } catch {
+          try {
+            const text = await res.text();
+            message = text || message;
+          } catch {}
+        }
+        setError(message);
+        return;
       }
+
+      // Success
       router.replace('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (_err) {
+      setError('Login failed');
     } finally {
       setSubmitting(false);
     }

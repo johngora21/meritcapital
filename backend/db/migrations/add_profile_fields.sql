@@ -13,3 +13,4 @@ ADD COLUMN twitter VARCHAR(512) NULL AFTER linkedin;
 ALTER TABLE users CHANGE COLUMN avatar_url avatar VARCHAR(512) NULL;
 
 
+
