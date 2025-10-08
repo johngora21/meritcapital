@@ -12,7 +12,13 @@ export const get = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 export const create = async (req, res, next) => {
-  try { const p = await svc.createProject(req.body); res.status(201).json({ data: p }); } catch (e) { next(e); }
+  try { 
+    const defaultStatus = 'Pending';
+    const incoming = req.body || {};
+    const projectData = { ...incoming, owner_id: req.user.id, status: incoming.status || defaultStatus };
+    const p = await svc.createProject(projectData); 
+    res.status(201).json({ data: p }); 
+  } catch (e) { next(e); }
 };
 export const update = async (req, res, next) => {
   try {
@@ -43,7 +49,7 @@ const mapProjectToCard = (p) => ({
   website: p.website || undefined,
   linkedin: p.linkedin || undefined,
   seeking: p.seeking ? p.seeking.split(',').map(s => s.trim()).filter(Boolean) : [],
-  status: p.status,
+  status: p.status || 'Pending',
   lastUpdated: p.last_updated ? new Date(p.last_updated).toISOString() : new Date().toISOString(),
   
   // Additional fields for detailed view
@@ -123,6 +129,29 @@ export const listCards = async (_req, res, next) => {
     const rows = await svc.listProjects();
     const data = rows.map(mapProjectToCard);
     res.json({ data });
+  } catch (e) { next(e); }
+};
+
+export const listMyProjects = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const rows = await svc.listProjectsByOwner(userId);
+    const data = rows.map(mapProjectToCard);
+    res.json({ data });
+  } catch (e) { next(e); }
+};
+
+export const updateProjectStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['Pending', 'Approved', 'Rejected', 'Active'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be Pending, Approved, Rejected, or Active' });
+    }
+    
+    await svc.updateProjectStatus(id, status);
+    res.json({ message: 'Project status updated successfully' });
   } catch (e) { next(e); }
 };
 

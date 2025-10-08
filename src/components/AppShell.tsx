@@ -57,11 +57,13 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     ];
     const role = user?.role;
     if (role === 'admin') {
-      base.splice(5, 0, { id: 'mentors', label: 'Mentors', href: '/mentors', icon: <FaUserTie size={20} /> });
-      base.splice(6, 0, { id: 'investors', label: 'Investors', href: '/investors', icon: <Landmark size={20} /> });
-      base.splice(7, 0, { id: 'investments', label: 'Investments', href: '/investments', icon: <CircleDollarSign size={20} /> });
-      base.splice(8, 0, { id: 'reviews', label: 'Project Reviews', href: '/reviews', icon: <BriefcaseBusiness size={20} /> });
-      base.splice(9, 0, { id: 'admin-system', label: 'Admin System', href: '/admin', icon: <Landmark size={20} /> });
+      // Remove Projects tab for admin - they only see projects via Project Reviews
+      base.splice(1, 1);
+      base.splice(4, 0, { id: 'mentors', label: 'Mentors', href: '/mentors', icon: <FaUserTie size={20} /> });
+      base.splice(5, 0, { id: 'investors', label: 'Investors', href: '/investors', icon: <Landmark size={20} /> });
+      base.splice(6, 0, { id: 'investments', label: 'Investments', href: '/investments', icon: <CircleDollarSign size={20} /> });
+      base.splice(7, 0, { id: 'reviews', label: 'Project Reviews', href: '/reviews', icon: <BriefcaseBusiness size={20} /> });
+      base.splice(8, 0, { id: 'admin-system', label: 'Admin System', href: '/admin', icon: <Landmark size={20} /> });
     } else if (role === 'mentor') {
       base.splice(5, 0, { id: 'mentors', label: 'Mentors', href: '/mentors', icon: <FaUserTie size={20} /> });
       base.splice(6, 0, { id: 'reviews', label: 'Project Reviews', href: '/reviews', icon: <BriefcaseBusiness size={20} /> });

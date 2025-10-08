@@ -1,6 +1,21 @@
 import { Project, ProjectTag, ProjectReview, ProjectMentorAssignment } from './model.js';
 
 export const listProjects = async () => Project.findAll({ include: [{ model: ProjectTag, as: 'tags' }] });
+export const listProjectsByOwner = async (ownerId) => Project.findAll({ 
+  where: { owner_id: ownerId }, 
+  include: [{ model: ProjectTag, as: 'tags' }] 
+});
+
+export const updateProjectStatus = async (projectId, status) => {
+  const project = await Project.findByPk(projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+  
+  project.status = status;
+  await project.save();
+  return project;
+};
 export const getProject = async (id) => Project.findByPk(id, { include: [{ model: ProjectTag, as: 'tags' }] });
 export const createProject = async (data) => Project.create(data);
 export const updateProject = async (id, data) => {
@@ -10,7 +25,7 @@ export const updateProject = async (id, data) => {
 };
 export const deleteProject = async (id) => Project.destroy({ where: { id } });
 
-export default { listProjects, getProject, createProject, updateProject, deleteProject };
+export default { listProjects, listProjectsByOwner, updateProjectStatus, getProject, createProject, updateProject, deleteProject };
 
 export const reviewProject = async ({ project_id, reviewer_user_id, decision, notes }) => {
   const proj = await Project.findByPk(project_id);

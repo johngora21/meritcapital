@@ -6,6 +6,8 @@ const router = Router();
 
 // Card DTOs for frontend projects grid/modal
 router.get('/cards', ctrl.listCards);
+router.get('/my-projects', authenticate, ctrl.listMyProjects);
+router.put('/:id/status', authenticate, authorize('admin'), ctrl.updateProjectStatus);
 router.get('/pending', authenticate, authorize('admin','superadmin'), ctrl.listPending);
 router.post('/:id/review', authenticate, authorize('admin','superadmin'), ctrl.review);
 router.post('/:id/assign-mentor', authenticate, authorize('admin','superadmin'), ctrl.assignMentor);

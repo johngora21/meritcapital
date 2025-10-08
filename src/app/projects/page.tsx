@@ -87,16 +87,13 @@ const industries = [
 const API = 'http://localhost:4000/api/v1';
 const IMG_PLACEHOLDER = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="Arial, Helvetica, sans-serif" font-size="20">No image</text></svg>';
 
-function useProjects(): Project[] {
+function useProjects(isReviewMode: boolean = false): Project[] {
   const [items, setItems] = React.useState<Project[]>([]);
   React.useEffect(() => {
     const loadProjects = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-        const res = await fetch(`${API}/projects/cards`, { 
-          credentials: 'include',
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
+        const endpoint = isReviewMode ? `${API}/projects/cards` : `${API}/projects/my-projects`;
+        const res = await fetch(endpoint, { credentials: 'include' });
         const json = await res.json().catch(() => ({}));
         setItems((json?.data || []) as Project[]);
       } catch (error) {
@@ -105,19 +102,20 @@ function useProjects(): Project[] {
       }
     };
     loadProjects();
-  }, []);
+  }, [isReviewMode]);
   return items;
 }
 
-export default function ProjectsPage() {
+export default function ProjectsPage({ isReviewMode = false }: { isReviewMode?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
-  const projects = useProjects();
+  const projects = useProjects(isReviewMode);
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStage, setSelectedStage] = React.useState("");
   const [selectedStatus, setSelectedStatus] = React.useState("");
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [userRole, setUserRole] = React.useState<string | null>(null);
   const [imageHeight, setImageHeight] = React.useState<string>('');
 
   const filtered = projects.filter((project) => {
@@ -126,7 +124,9 @@ export default function ProjectsPage() {
     const matchesIndustry = selectedIndustry === "" || project.industry === selectedIndustry;
     const matchesStage = selectedStage === "" || project.stage === selectedStage;
     const matchesStatus = selectedStatus === "" || project.status === selectedStatus;
-    return matchesQuery && matchesIndustry && matchesStage && matchesStatus;
+    const statusNorm = normalizeStatus((project as any).status as any);
+    const includeInReview = isReviewMode ? statusNorm !== 'Active' : true;
+    return matchesQuery && matchesIndustry && matchesStage && matchesStatus && includeInReview;
   });
 
   const openModal = (project: Project) => {
@@ -141,29 +141,25 @@ export default function ProjectsPage() {
     router.push('/projects/add');
   };
 
-  // Check if user is admin
+  // Check if user is admin and redirect if needed
   React.useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-        console.log('Token:', token ? 'exists' : 'missing');
-        if (token) {
-          const res = await fetch(`${API}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+        const res = await fetch(`${API}/auth/me`, { credentials: 'include' });
           const user = await res.json();
-          console.log('User data:', user);
-          console.log('User role:', user?.role);
           const adminStatus = user?.role === 'admin';
-          console.log('Is admin:', adminStatus);
           setIsAdmin(adminStatus);
+        setUserRole(user?.role || null);
+        if (adminStatus && !isReviewMode) {
+          router.replace('/reviews');
+          return;
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
       }
     };
     checkAdmin();
-  }, []);
+  }, [isReviewMode, router]);
 
   // Load image height when a project is selected
   React.useEffect(() => {
@@ -210,10 +206,9 @@ export default function ProjectsPage() {
     }
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const response = await fetch(`${API}/projects/${project.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -225,6 +220,72 @@ export default function ProjectsPage() {
     } catch (error) {
       console.error('Error deleting project:', error);
       alert('Failed to delete project. Please try again.');
+    }
+  };
+
+  const handleApproveProject = async (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation(); // Prevent opening modal
+    
+    try {
+      const response = await fetch(`${API}/projects/${project.id}/status`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Approved' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve project');
+      }
+
+      // Refresh the page to show updated list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error approving project:', error);
+      alert('Failed to approve project. Please try again.');
+    }
+  };
+
+  const handleRejectProject = async (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation(); // Prevent opening modal
+    
+    try {
+      const response = await fetch(`${API}/projects/${project.id}/status`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Rejected' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject project');
+      }
+
+      // Refresh the page to show updated list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error rejecting project:', error);
+      alert('Failed to reject project. Please try again.');
+    }
+  };
+
+  const handlePublishProject = async (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`${API}/projects/${project.id}/status`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Active' })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to publish project');
+      }
+      // After publishing, send admin to the Startups page where published cards appear
+      router.push('/entrepreneurs');
+    } catch (error) {
+      console.error('Error publishing project:', error);
+      alert('Failed to publish project. Please try again.');
     }
   };
 
@@ -243,13 +304,27 @@ export default function ProjectsPage() {
     "Rejected"
   ];
 
+  function normalizeStatus(status: string | undefined | null): string {
+    if (!status) return '';
+    const s = String(status).trim().toLowerCase();
+    if (s === 'approved') return 'Approved';
+    if (s === 'pending') return 'Pending';
+    if (s === 'rejected') return 'Rejected';
+    if (s === 'active') return 'Active';
+    return '';
+  }
+
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (normalizeStatus(status)) {
       case 'Approved': return '#10b981';
       case 'Pending': return '#f59e0b';
       case 'Rejected': return '#ef4444';
       default: return '#f59e0b';
     }
+  };
+
+  const shouldShowStatusBadge = (status: string) => {
+    return ['Pending', 'Approved', 'Rejected'].includes(normalizeStatus(status));
   };
 
   const formatDate = (dateString: string) => {
@@ -262,6 +337,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="proj-wrap">
+      {!isReviewMode && (
       <div className="proj-head">
         <div className="proj-head-content">
           <h2>My Projects</h2>
@@ -272,6 +348,7 @@ export default function ProjectsPage() {
           Add Project
         </button>
       </div>
+      )}
       
       <div className="proj-toolbar">
         <div className="proj-filters">
@@ -324,21 +401,45 @@ export default function ProjectsPage() {
         {filtered.map((project) => (
           <div key={project.id} className="proj-card" onClick={() => openModal(project)}>
             <div className="proj-card-header">
-              <div className="proj-image">
+              <div className="proj-image" style={{ position: 'relative' }}>
                 <img src={project.image || IMG_PLACEHOLDER} alt={project.name} />
-                <div className="proj-industry-overlay">{project.industry}</div>
-                <div className="proj-status-badge" style={{ backgroundColor: getStatusColor(project.status) }}>
-                  {project.status}
+                {shouldShowStatusBadge(project.status) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      zIndex: 2,
+                      backgroundColor: getStatusColor(project.status),
+                      color: '#fff',
+                      padding: '4px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      letterSpacing: '0.02em',
+                      textTransform: 'capitalize',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      lineHeight: 1,
+                      whiteSpace: 'nowrap',
+                      width: 'auto',
+                      pointerEvents: 'none',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                    }}
+                  >
+                    {normalizeStatus(project.status)}
                 </div>
+                )}
               </div>
             </div>
             
             <div className="proj-card-body">
-              <h3 className="proj-title">{project.name}</h3>
-              {project.tagline && <p className="proj-tagline">{project.tagline}</p>}
+              <h3 className="proj-title">{project.project_title || project.name}</h3>
+              <p className="proj-company-name" style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 12px 0' }}>{project.name}</p>
               <p className="proj-description">{project.description}</p>
               
-              <div className="proj-meta-simple">
+              <div className="proj-meta-simple" style={{ marginBottom: '8px' }}>
                 <div className="proj-meta-item">
                   <span className="proj-meta-label">Stage:</span>
                   <span className="proj-meta-value">{project.stage}</span>
@@ -355,7 +456,7 @@ export default function ProjectsPage() {
                 )}
               </div>
 
-              <div className="proj-tags">
+              <div className="proj-tags" style={{ marginBottom: '8px' }}>
                 {project.tags.slice(0, 3).map((tag) => (
                   <span key={tag} className="proj-tag">{tag}</span>
                 ))}
@@ -367,10 +468,103 @@ export default function ProjectsPage() {
 
             <div className="proj-card-footer">
               <div className="proj-footer-left">
-                <span className="proj-last-updated">Updated: {formatDate(project.lastUpdated)}</span>
+                {project.headquarters_country && (
+                  <span className="proj-last-updated">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    {project.headquarters_city && `${project.headquarters_city}, `}{project.headquarters_country}
+                  </span>
+                )}
               </div>
               <div className="proj-footer-right" style={{ display: 'flex', gap: '8px' }}>
-                {(isAdmin || true) && (
+                {isReviewMode ? (
+                  (() => {
+                    const s = normalizeStatus(project.status);
+                    return (
+                      <>
+                        <button 
+                          onClick={(e) => handleRejectProject(e, project)}
+                          title="Reject Project"
+                      style={{
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '14px',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                          Reject
+                        </button>
+
+                        {s !== 'Approved' && (
+                          <button 
+                            onClick={(e) => handleApproveProject(e, project)}
+                            title="Approve Project"
+                            style={{
+                              background: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20,6 9,17 4,12"/>
+                            </svg>
+                            Approve
+                          </button>
+                        )}
+
+                        {s === 'Approved' && (
+                          <button 
+                            onClick={(e) => handlePublishProject(e, project)}
+                            title="Publish to Startups"
+                            style={{
+                              background: '#2563eb',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#1d4ed8'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#2563eb'}
+                          >
+                            Publish
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()
+                ) : (
+                  (isAdmin || true) && (
                   <>
                     <button 
                       onClick={(e) => handleEditProject(e, project)}
@@ -388,8 +582,8 @@ export default function ProjectsPage() {
                         fontSize: '14px',
                         transition: 'background-color 0.2s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -412,8 +606,8 @@ export default function ProjectsPage() {
                         fontSize: '14px',
                         transition: 'background-color 0.2s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3,6 5,6 21,6"/>
@@ -423,6 +617,7 @@ export default function ProjectsPage() {
                       </svg>
                     </button>
                   </>
+                  )
                 )}
               </div>
             </div>
@@ -448,6 +643,7 @@ export default function ProjectsPage() {
                   {selectedProject.project_title && <h2 className="proj-modal-project-title" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: '#111827' }}>{selectedProject.project_title}</h2>}
                   {selectedProject.tagline && <h3 className="proj-modal-tagline" style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '500', color: '#374151' }}>{selectedProject.tagline}</h3>}
                   <p className="proj-modal-company-name" style={{ margin: '0', fontSize: '14px', color: '#6b7280', lineHeight: '1.5' }}>{selectedProject.name}</p>
+                  {null}
                 </div>
               </div>
               
@@ -463,12 +659,12 @@ export default function ProjectsPage() {
                       <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Employees:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.employees}</span></div>
                       <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Revenue:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.revenue}</span></div>
                       <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Industry:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.industry}</span></div>
-                      {selectedProject.website && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Website:</span><span className="proj-modal-meta-value"><a href={selectedProject.website} target="_blank" rel="noopener noreferrer" style={{color: '#008000', textDecoration: 'underline', fontSize: '13px'}}>{selectedProject.website}</a></span></div>)}
+                      {null}
                       <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Last Updated:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{formatDate(selectedProject.lastUpdated)}</span></div>
                       {selectedProject.funding_stage && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Funding Stage:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.funding_stage}</span></div>)}
                       {selectedProject.funding_raised && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Funding Raised:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.funding_raised}</span></div>)}
-                    </div>
-                  </div>
+                      </div>
+                      </div>
 
                   {/* Legal & Business Structure */}
                   {(selectedProject.legal_structure || selectedProject.registration_number || selectedProject.tax_id) && (
@@ -478,9 +674,9 @@ export default function ProjectsPage() {
                         {selectedProject.legal_structure && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Legal Structure:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.legal_structure}</span></div>)}
                         {selectedProject.registration_number && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Registration Number:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.registration_number}</span></div>)}
                         {selectedProject.tax_id && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Tax ID:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.tax_id}</span></div>)}
-                        </div>
-                          </div>
-                        )}
+                      </div>
+                      </div>
+                      )}
 
                   {/* Product & IP */}
                   {(selectedProject.product_type || selectedProject.intellectual_property) && (
@@ -490,8 +686,10 @@ export default function ProjectsPage() {
                         {selectedProject.product_type && selectedProject.product_type.length > 0 && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Product Type:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.product_type.join(', ')}</span></div>)}
                         {selectedProject.intellectual_property && selectedProject.intellectual_property.length > 0 && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Intellectual Property:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.intellectual_property.join(', ')}</span></div>)}
                       </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
+
+                  {null}
 
                   {/* Compliance */}
                   {(selectedProject.regulatory_compliance || selectedProject.data_privacy_compliance) && (
@@ -501,8 +699,8 @@ export default function ProjectsPage() {
                         {selectedProject.regulatory_compliance && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Regulatory Compliance:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.regulatory_compliance}</span></div>)}
                         {selectedProject.data_privacy_compliance && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Data Privacy Compliance:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.data_privacy_compliance}</span></div>)}
                       </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
 
                   {/* Location */}
                   {(selectedProject.headquarters_country || selectedProject.headquarters_city) && (
@@ -511,8 +709,8 @@ export default function ProjectsPage() {
                       <div className="proj-modal-meta">
                         {selectedProject.headquarters_city && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">City:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.headquarters_city}</span></div>)}
                         {selectedProject.headquarters_country && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Country:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.headquarters_country}</span></div>)}
-                          </div>
-                          </div>
+                    </div>
+                  </div>
                         )}
 
                   {/* Founder Information */}
@@ -523,7 +721,16 @@ export default function ProjectsPage() {
                         <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Founder:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.founder_name}</span></div>
                         {selectedProject.founder_role && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Role:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.founder_role}</span></div>)}
                         {selectedProject.founder_email && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Email:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.founder_email}</span></div>)}
-                        {selectedProject.founder_linkedin && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">LinkedIn:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.founder_linkedin}</span></div>)}
+                        {selectedProject.founder_linkedin && (
+                          <div className="proj-modal-meta-item">
+                            <span className="proj-modal-meta-label">LinkedIn:</span>
+                            <a href={selectedProject.founder_linkedin} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', textDecoration: 'none' }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="#0077b5" style={{ verticalAlign: 'middle', marginLeft: '4px' }}>
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                              </svg>
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -541,8 +748,17 @@ export default function ProjectsPage() {
                               <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Role:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{coFounder.role}</span></div>
                               {coFounder.email && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Email:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{coFounder.email}</span></div>}
                               {coFounder.phone && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Phone:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{coFounder.phone}</span></div>}
-                              {coFounder.linkedin && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">LinkedIn:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{coFounder.linkedin}</span></div>}
-                            </div>
+                              {coFounder.linkedin && (
+                          <div className="proj-modal-meta-item">
+                                  <span className="proj-modal-meta-label">LinkedIn:</span>
+                                  <a href={coFounder.linkedin} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', textDecoration: 'none' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#0077b5" style={{ verticalAlign: 'middle', marginLeft: '4px' }}>
+                                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                    </svg>
+                                  </a>
+                          </div>
+                        )}
+                          </div>
                           ))}
                           </div>
                         )}
@@ -555,21 +771,29 @@ export default function ProjectsPage() {
                               <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Role:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{member.role}</span></div>
                               {member.email && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Email:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{member.email}</span></div>}
                               {member.phone && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Phone:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{member.phone}</span></div>}
-                              {member.linkedin && <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">LinkedIn:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{member.linkedin}</span></div>}
-                            </div>
+                              {member.linkedin && (
+                          <div className="proj-modal-meta-item">
+                                  <span className="proj-modal-meta-label">LinkedIn:</span>
+                                  <a href={member.linkedin} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', textDecoration: 'none' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#0077b5" style={{ verticalAlign: 'middle', marginLeft: '4px' }}>
+                                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                    </svg>
+                                  </a>
+                          </div>
+                        )}
+                      </div>
                           ))}
-                          </div>
-                        )}
-                          </div>
-                        )}
+                    </div>
+                  )}
+                    </div>
+                  )}
 
-                  {/* Contact Preferences */}
-                  {(selectedProject.preferred_contact_method || selectedProject.best_time_to_contact) && (
+                  {/* Contact */}
+                  {selectedProject.preferred_contact_method && (
                     <div className="proj-modal-section">
-                      <h3>Contact Preferences</h3>
+                      <h3>Contact</h3>
                       <div className="proj-modal-meta">
-                        {selectedProject.preferred_contact_method && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Preferred Contact Method:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.preferred_contact_method}</span></div>)}
-                        {selectedProject.best_time_to_contact && (<div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Best Time to Contact:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.best_time_to_contact}</span></div>)}
+                        <div className="proj-modal-meta-item"><span className="proj-modal-meta-label">Contact:</span><span className="proj-modal-meta-value" style={{ fontSize: '13px' }}>{selectedProject.preferred_contact_method}</span></div>
                       </div>
                     </div>
                   )}
@@ -683,16 +907,16 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Currently Seeking */}
-                  <div className="proj-modal-section">
+                    <div className="proj-modal-section">
                     <h3>Currently Seeking</h3>
                     <div className="proj-modal-seeking">
                       {selectedProject.seeking.map((item) => (<span key={item} className="proj-tag">{item}</span>))}
-                    </div>
-                  </div>
+                          </div>
+                          </div>
 
                   {/* Social Mission */}
                   {selectedProject.social_mission && (
-                    <div className="proj-modal-section">
+                  <div className="proj-modal-section">
                       <h3>Social Mission</h3>
                       <p className="proj-modal-text" style={{ fontSize: '13px' }}>{selectedProject.social_mission}</p>
                     </div>
@@ -720,7 +944,7 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Additional Information (others) */}
-                  {(selectedProject.demo_video || selectedProject.press_coverage || selectedProject.awards_recognition || selectedProject.partnerships || (selectedProject as any).pitch_deck_name || (selectedProject as any).business_plan_name) && (
+                  {(selectedProject.demo_video || selectedProject.website || selectedProject.press_coverage || selectedProject.awards_recognition || selectedProject.partnerships || (selectedProject as any).pitch_deck_name || (selectedProject as any).business_plan_name) && (
                     <div className="proj-modal-section">
                       <h3>Additional Information</h3>
                       <div className="proj-modal-meta">
@@ -755,6 +979,40 @@ export default function ProjectsPage() {
                             <span className="proj-modal-meta-value" style={{ fontWeight: '400', fontSize: '13px' }}>{(selectedProject as any).business_plan_name}</span>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(selectedProject.website || selectedProject.demo_video) && (
+                  <div className="proj-modal-section">
+                    <h3>Actions</h3>
+                      <div className="proj-modal-meta">
+                        <div className="proj-modal-meta-item">
+                          <div className="ent-modal-links">
+                            {selectedProject.website && (
+                              <a
+                                className="ent-modal-link ent-contact-btn"
+                                href={selectedProject.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 12px' }}
+                              >
+                                Website
+                              </a>
+                            )}
+                            {selectedProject.demo_video && (
+                              <a
+                                className="ent-modal-link ent-partner-btn"
+                                href={selectedProject.demo_video}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 12px' }}
+                              >
+                                Demo
+                              </a>
+                            )}
+                    </div>
+                  </div>
                       </div>
                     </div>
                   )}

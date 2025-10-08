@@ -966,6 +966,18 @@ export default function AddStartupPage() {
           />
         </div>
         <div className="startup-form-group">
+          <label>Demo URL</label>
+          <input
+            type="url"
+            value={formData.demoVideo}
+            onChange={(e) => handleInputChange('demoVideo', e.target.value)}
+            placeholder="https://youtube.com/watch?v=..."
+          />
+        </div>
+      </div>
+
+      <div className="startup-form-row">
+        <div className="startup-form-group">
           <label>Logo/Image</label>
           <input
             type="file"
@@ -1947,15 +1959,7 @@ export default function AddStartupPage() {
         </div>
       </div>
 
-      <div className="startup-form-group startup-form-group-small">
-        <label>Demo Video URL</label>
-        <input
-          type="url"
-          value={formData.demoVideo}
-          onChange={(e) => handleInputChange('demoVideo', e.target.value)}
-          placeholder="https://youtube.com/watch?v=..."
-        />
-      </div>
+      {null}
       <div className="startup-form-group">
         <label>Press Coverage</label>
         <textarea
