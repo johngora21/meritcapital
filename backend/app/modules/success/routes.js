@@ -4,7 +4,7 @@ import { authenticate, authorize } from '../../core/http/auth.js';
 
 const router = Router();
 
-router.get('/cards', authenticate, ctrl.listCards);
+router.get('/cards', ctrl.listCards);
 
 router.get('/', authenticate, ctrl.list);
 router.get('/:id', authenticate, ctrl.get);

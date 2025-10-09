@@ -1,13 +1,15 @@
 "use client";
 import React from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api/v1';
+const API = 'http://localhost:4000/api/v1';
 
 type Story = {
+  id: string;
   title: string;
   description: string;
   date: string;
   videoUrl: string;
+  youtubeUrl: string;
   poster: string;
   fullStory: string;
   publishedDate: string;
@@ -24,122 +26,66 @@ const industries = [
   "Impact & Sustainability"
 ];
 
-const stories: Story[] = [
-  {
-    title: "Amala Technologies: Transforming Financial Inclusion with Digital Solutions for SACCOs and MFIs",
-    description:
-      "Amala Technologies is a Tanzanian fintech startup that provides core banking solutions for financial institutions like SACCOS and MFIs.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    poster: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "Amala Technologies is a Tanzanian fintech startup that provides core banking solutions for financial institutions like SACCOS and MFIs. With a portfolio of over 32,600 clients and TZS 246 billion in disbursed loans, Amala digitizes operations, enhancing efficiency in client management, loans, and savings. Their innovative platform drives financial inclusion and empowers institutions to offer better services to their communities.",
-    publishedDate: "8/10/2025, 5:40:15 PM",
-    industry: "Finance"
-  },
-  {
-    title: "Kiasi App: Empowering Tanzanians with Smart Savings and Financial Goals",
-    description:
-      "KiasiApp is helping Tanzanians achieve their financial goals with a digital piggy bank that enables small mobile money deposits.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
-    poster: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "KiasiApp is helping Tanzanians achieve their financial goals with a digital piggy bank that enables small mobile money deposits. With 200+ subscribers, KiasiApp empowers users to save easily and securely for their future. Explore how KiasiApp is making financial management simple and accessible for everyone!",
-    publishedDate: "8/10/2025, 5:40:15 PM",
-    industry: "Finance"
-  },
-  {
-    title: "Breaking Barriers in Menstrual Health: Dr. Iddah's Innovation Empowering Women and Girls in Tanzania",
-    description:
-      "FHT Company is transforming access to menstrual products in Tanzania with its locally produced sanitary pads.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    poster: "https://images.unsplash.com/photo-1542736667-069246bdbc74?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "FHT Company is transforming access to menstrual products in Tanzania with its locally produced sanitary pads. Supported by the FUNGUO Programme, this initiative empowers women and girls in underserved communities to manage their periods with dignity, improving health outcomes and creating employment opportunities.",
-    publishedDate: "8/10/2025, 4:30:20 PM",
-    industry: "Health"
-  },
-  {
-    title: "Zena Msonde: Revolutionizing Tanzania's Transport System with Smart Tech",
-    description:
-      "Through IoT and e-ticketing solutions, passengers enjoy smoother, safer travel while companies reduce fraud and improve efficiency.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
-    poster: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "Through IoT and e-ticketing solutions, passengers enjoy smoother, safer travel while companies reduce fraud and improve efficiency. Backed by the FUNGUO Programme, Zena is proving technology can drive real change.",
-    publishedDate: "8/10/2025, 3:15:45 PM",
-    industry: "Digital Technology"
-  },
-  {
-    title: "Transforming Waste into Sustainable Building Solutions with Arena Recycling",
-    description:
-      "Hellena is revolutionizing waste management by transforming waste into sustainable building materials.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    poster: "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "Hellena is revolutionizing waste management by transforming waste into sustainable building materials, proving that business can drive positive change.",
-    publishedDate: "8/10/2025, 2:20:30 PM",
-    industry: "Impact & Sustainability"
-  },
-  {
-    title: "Dr. Mwambela: Revolutionizing Agriculture with Eco-Friendly Solutions",
-    description:
-      "Plant Biodefenders protects crops while safeguarding the environment.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
-    poster: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "Plant Biodefenders protects crops while safeguarding the environment. With support from FUNGUO, Dr. Mwambela turned her vision into reality.",
-    publishedDate: "8/10/2025, 1:45:15 PM",
-    industry: "Agriculture"
-  },
-  {
-    title: "Sea Weed Cafe: Empowering Coastal Communities with Sustainable Innovation",
-    description:
-      "Sea Weed Cafe harnesses seaweed resources to create nutritious, high-value products.",
-    date: "8/10/2025",
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    poster: "https://images.unsplash.com/photo-1543255006-c5064bf9eacf?w=1200&q=80&auto=format&fit=crop",
-    fullStory: "Sea Weed Cafe harnesses seaweed resources to create nutritious, high-value products—empowering coastal communities and promoting healthier diets.",
-    publishedDate: "8/10/2025, 12:30:00 PM",
-    industry: "Agriculture"
-  },
-];
 
 export default function SuccessStoriesPage() {
   const [query, setQuery] = React.useState("");
   const [selectedIndustry, setSelectedIndustry] = React.useState("");
   const [selectedStory, setSelectedStory] = React.useState<Story | null>(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [isEditMode, setIsEditMode] = React.useState(false);
+  const [editingStory, setEditingStory] = React.useState<Story | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const [items, setItems] = React.useState<Story[]>(stories);
+  const [items, setItems] = React.useState<Story[]>([]);
   const [newStory, setNewStory] = React.useState({
     title: '',
     description: '',
-    date: '',
     videoUrl: '',
+    imageUrl: '',
     poster: '',
     fullStory: '',
-    publishedDate: '',
-    industry: ''
+    industry: '',
+    youtubeUrl: ''
   });
 
   React.useEffect(() => {
     const loadRole = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-        const res = await fetch(`${API}/auth/me`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          credentials: 'include'
-        });
+        const res = await fetch(`${API}/auth/me`, { credentials: 'include' });
+        if (!res.ok) {
+          setIsAdmin(false);
+          return;
+        }
         const data = await res.json().catch(() => ({}));
-        setIsAdmin((data?.data?.role || '').toLowerCase() === 'admin');
-      } catch {
+        const role = ((data?.data?.role || data?.role || '') as string).toLowerCase();
+        setIsAdmin(role === 'admin');
+      } catch (error) {
         setIsAdmin(false);
       }
     };
     loadRole();
   }, []);
 
-  const filtered = stories.filter((s) => {
+  React.useEffect(() => {
+    const loadStories = async () => {
+      try {
+            const res = await fetch('http://localhost:4000/api/v1/success-stories/cards');
+            if (!res.ok) {
+              console.log('❌ API response not ok:', res.status, res.statusText);
+              setItems([]);
+              return;
+            }
+        const json = await res.json().catch(() => ({}));
+            const stories = Array.isArray(json?.data) ? json.data : [];
+            setItems(stories);
+          } catch (error) {
+            console.error('❌ Error loading stories:', error);
+        setItems([]);
+      }
+    };
+    loadStories();
+  }, []);
+
+  const filtered = items.filter((s) => {
     const matchesQuery = s.title.toLowerCase().includes(query.toLowerCase());
     const matchesIndustry = selectedIndustry === "" || s.industry === selectedIndustry;
     return matchesQuery && matchesIndustry;
@@ -155,31 +101,77 @@ export default function SuccessStoriesPage() {
 
   const handleAddStory = async () => {
     try {
-      const response = await fetch('/api/v1/success-stories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Validate required fields
+      if (!newStory.title.trim()) {
+        alert('Please enter a story title');
+        return;
+      }
+      if (!newStory.fullStory.trim()) {
+        alert('Please enter story content');
+        return;
+      }
+      if (!newStory.industry) {
+        alert('Please select an industry');
+        return;
+      }
+
+      // Create/update story with base64 data (like projects and opportunities)
+      const storyData = {
+        title: newStory.title,
+        full_story: newStory.fullStory,
+        industry: newStory.industry,
+        image_url: newStory.imageUrl || null,
+        video_url: newStory.videoUrl || null,
+        youtube_url: newStory.youtubeUrl || null
+      };
+
+      const url = isEditMode && editingStory
+        ? `http://localhost:4000/api/v1/success-stories/${editingStory.id}`
+        : 'http://localhost:4000/api/v1/success-stories';
+      
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         credentials: 'include',
-        body: JSON.stringify(newStory)
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(storyData)
       });
 
       if (response.ok) {
-        const returned = await response.json().catch(() => null);
-        const created: Story = returned?.data || {
-          ...newStory,
-          publishedDate: newStory.publishedDate || new Date().toLocaleString(),
-        };
-        setItems((prev) => [...prev, created]);
+        try {
+          const res2 = await fetch('/api/v1/success-stories/cards', { credentials: 'include' });
+          const json2 = await res2.json().catch(() => ({}));
+          setItems(Array.isArray(json2?.data) ? json2.data : []);
+        } catch {}
         setShowAddModal(false);
+        setIsEditMode(false);
+        setEditingStory(null);
         setNewStory({
           title: '',
           description: '',
-          date: '',
           videoUrl: '',
+          imageUrl: '',
           poster: '',
           fullStory: '',
-          publishedDate: '',
-          industry: ''
+          industry: '',
+          youtubeUrl: ''
         });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || 'Unknown error';
+        console.error('Story operation error:', response.status, errorData);
+        if (response.status === 401) {
+          alert('You must be logged in to add stories. Please log in first.');
+        } else if (response.status === 403) {
+          alert('Only admins can add stories. You need admin privileges.');
+        } else if (response.status === 404) {
+          alert('Story not found. It may have been deleted by another user.');
+        } else {
+          alert(`Failed to ${isEditMode ? 'update' : 'add'} story: ${response.status} - ${errorMessage}`);
+        }
       }
     } catch (error) {
       console.error('Error adding story:', error);
@@ -241,6 +233,8 @@ export default function SuccessStoriesPage() {
           max-height: 90vh;
           overflow: hidden;
           position: relative;
+          display: flex;
+          flex-direction: column;
         }
         .proj-add-modal-close {
           position: absolute;
@@ -261,6 +255,10 @@ export default function SuccessStoriesPage() {
         }
         .proj-add-modal-content {
           padding: 20px;
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
         }
         .proj-add-modal-content h2 {
           margin: 0 0 8px 0;
@@ -310,6 +308,7 @@ export default function SuccessStoriesPage() {
           gap: 12px;
           justify-content: flex-end;
           margin-top: 8px;
+          flex-shrink: 0;
         }
         .proj-add-cancel-btn {
           background: #f3f4f6;
@@ -380,14 +379,17 @@ export default function SuccessStoriesPage() {
         </div>
       </div>
       <div className="ss-grid">
-        {items.filter((s) => {
-          const matchesQuery = s.title.toLowerCase().includes(query.toLowerCase());
-          const matchesIndustry = selectedIndustry === "" || s.industry === selectedIndustry;
-          return matchesQuery && matchesIndustry;
-        }).map((s) => (
-          <article key={s.title} className="ss-card" onClick={() => openModal(s)}>
+        {filtered.map((s) => (
+          <article key={s.id} className="ss-card" onClick={() => openModal(s)}>
             <div className="ss-media">
-              <img src={s.poster} alt={s.title} className="ss-poster" />
+              <img 
+                src={s.poster ? (s.poster.startsWith('/uploads') ? `http://localhost:4000${s.poster}` : s.poster) : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=240&fit=crop'} 
+                alt={s.title} 
+                className="ss-poster" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=240&fit=crop';
+                }}
+              />
               <div className="ss-play-overlay">
                 <div className="ss-play-icon">▶</div>
               </div>
@@ -396,8 +398,104 @@ export default function SuccessStoriesPage() {
               <h3 className="ss-title">{s.title}</h3>
               <p className="ss-desc">{s.description}</p>
             </div>
-            <div className="ss-footer">
+            <div className="ss-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="ss-date">Published: {s.publishedDate}</span>
+              {isAdmin && (
+                <div className="ss-admin-controls" style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingStory(s);
+                      setIsEditMode(true);
+                      setNewStory({
+                        title: s.title,
+                        description: s.description,
+                        videoUrl: s.videoUrl,
+                        imageUrl: s.poster,
+                        poster: s.poster,
+                        fullStory: s.fullStory,
+                        industry: s.industry,
+                        youtubeUrl: s.youtubeUrl || ''
+                      });
+                      setShowAddModal(true);
+                    }}
+                    title="Edit Story"
+                    style={{
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '14px',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete "${s.title}"?`)) {
+                        if (!s.id) {
+                          alert('Error: Story ID is missing');
+                          return;
+                        }
+                        try {
+                          const response = await fetch(`http://localhost:4000/api/v1/success-stories/${s.id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                          });
+
+                          if (response.ok) {
+                            // Remove the story from the local state
+                            setItems(items.filter(item => item.id !== s.id));
+                            alert('Story deleted successfully');
+                          } else {
+                            const errorData = await response.json().catch(() => ({}));
+                            console.error('Delete error:', response.status, errorData);
+                            alert(`Failed to delete story: ${response.status} - ${errorData.message || 'Unknown error'}`);
+                          }
+                        } catch (error) {
+                          console.error('Error deleting story:', error);
+                          alert('Failed to delete story. Please try again.');
+                        }
+                      }
+                    }}
+                    title="Delete Story"
+                    style={{
+                      background: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '14px',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           </article>
         ))}
@@ -405,24 +503,99 @@ export default function SuccessStoriesPage() {
 
       {selectedStory && (
         <div className="ss-modal-overlay" onClick={closeModal}>
-          <div className="ss-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="ss-modal" onClick={(e) => e.stopPropagation()} style={{ 
+            width: '80vw', 
+            maxWidth: '1000px', 
+            height: '95vh', 
+            maxHeight: '900px',
+            overflow: 'auto',
+            minHeight: '600px'
+          }}>
             <button className="ss-modal-close" onClick={closeModal}>×</button>
-            <div className="ss-modal-content">
-              <div className="ss-modal-video">
-                <video controls autoPlay className="ss-modal-video-player">
-                  <source src={selectedStory.videoUrl} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+            <div className="ss-modal-content" style={{ height: '100%', overflowY: 'auto' }}>
+              
+              {/* Debug info */}
+              {(() => { console.log('🎥 Video URL Debug:', { videoUrl: selectedStory.videoUrl, youtubeUrl: selectedStory.youtubeUrl, isYouTube: selectedStory.youtubeUrl?.includes('youtube.com') || selectedStory.youtubeUrl?.includes('youtu.be') }); return null; })()}
+              <div className="ss-modal-video" style={{ marginBottom: '20px' }}>
+                {/* Priority: Uploaded video first, then YouTube */}
+                {selectedStory.videoUrl ? (
+                  <video 
+                    controls 
+                    autoPlay
+                    className="ss-modal-video-player"
+                    style={{ width: '100%', height: 'auto', aspectRatio: '16/9', borderRadius: '8px', display: 'block' }}
+                  >
+                    <source src={selectedStory.videoUrl.startsWith('/uploads') ? `http://localhost:4000${selectedStory.videoUrl}` : selectedStory.videoUrl} />
+                    Your browser does not support the video tag.
+                  </video>
+                ) : selectedStory.youtubeUrl && (selectedStory.youtubeUrl.includes('youtube.com') || selectedStory.youtubeUrl.includes('youtu.be')) ? (
+                  <div style={{ 
+                    width: '100%', 
+                    aspectRatio: '16/9',
+                    background: '#000', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ textAlign: 'center', color: 'white' }}>
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style={{ marginBottom: '16px' }}>
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <p style={{ margin: 0, fontSize: '16px' }}>YouTube Video</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '14px', opacity: 0.8 }}>Click "Watch on YouTube" below to view</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    width: '100%', 
+                    aspectRatio: '16/9',
+                    background: '#f3f4f6', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    color: '#6b7280'
+                  }}>
+                    <p>No video available</p>
+                  </div>
+                )}
               </div>
               <div className="ss-modal-body">
                 <h2 className="ss-modal-title">{selectedStory.title}</h2>
-                <div className="ss-modal-story">
+                <div className="ss-modal-story" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                   <h3>Story</h3>
-                  <p>{selectedStory.fullStory}</p>
+                  <p style={{ whiteSpace: 'pre-wrap', overflowY: 'auto', maxHeight: '60vh', padding: '8px 0' }}>{selectedStory.fullStory}</p>
                 </div>
                 <div className="ss-modal-meta">
-                  <span className="ss-modal-published">Published: {selectedStory.publishedDate}</span>
+                  <span className="ss-modal-published">Created: {selectedStory.publishedDate}</span>
                 </div>
+                {selectedStory.youtubeUrl && (selectedStory.youtubeUrl.includes('youtube.com') || selectedStory.youtubeUrl.includes('youtu.be')) && (
+                  <div className="ss-modal-actions" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <a 
+                      href={selectedStory.youtubeUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{
+                        background: '#ff0000',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      Watch on YouTube
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -431,15 +604,23 @@ export default function SuccessStoriesPage() {
 
       {/* Add Story Modal */}
       {showAddModal && (
-        <div className="proj-add-modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div className="proj-add-modal-overlay" onClick={() => {
+          setShowAddModal(false);
+          setIsEditMode(false);
+          setEditingStory(null);
+        }}>
           <div className="proj-add-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="proj-add-modal-close" onClick={() => setShowAddModal(false)}>
+            <button className="proj-add-modal-close" onClick={() => {
+              setShowAddModal(false);
+              setIsEditMode(false);
+              setEditingStory(null);
+            }}>
               ×
             </button>
             <div className="proj-add-modal-content">
               <div className="proj-add-modal-header">
-                <h2>Add New Success Story</h2>
-                <p>Create a new inspiring success story</p>
+                <h2>{isEditMode ? 'Edit Success Story' : 'Add New Success Story'}</h2>
+                <p>{isEditMode ? 'Update the success story details' : 'Create a new inspiring success story'}</p>
               </div>
               <div className="proj-add-modal-body">
                 <form className="proj-add-form">
@@ -478,36 +659,88 @@ export default function SuccessStoriesPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="proj-add-form-group">
-                      <label>Published Date *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., 8/10/2025, 5:40:15 PM"
-                        value={newStory.publishedDate}
-                        onChange={(e) => setNewStory({ ...newStory, publishedDate: e.target.value })}
-                      />
-                    </div>
                   </div>
 
-                  <div className="proj-add-form-row">
+                  <div className="proj-add-form-group">
+                    <label>Video Upload *</label>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            setNewStory({ ...newStory, videoUrl: result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>
+                      Upload MP4, WebM, or other video formats
+                    </p>
+                  </div>
+
                     <div className="proj-add-form-group">
-                      <label>Video URL *</label>
+                      <label>YouTube URL</label>
                       <input
                         type="url"
-                        placeholder="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
-                        value={newStory.videoUrl}
-                        onChange={(e) => setNewStory({ ...newStory, videoUrl: e.target.value })}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                        value={newStory.youtubeUrl}
+                        onChange={(e) => setNewStory({ ...newStory, youtubeUrl: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px'
+                        }}
                       />
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>
+                        Alternative to video upload - paste YouTube URL here
+                    </p>
                     </div>
+
                     <div className="proj-add-form-group">
-                      <label>Poster Image URL *</label>
+                    <label>Poster Image *</label>
                       <input
-                        type="url"
-                        placeholder="https://images.unsplash.com/photo-1556157382-97eda2d62296?w=1200&q=80&auto=format&fit=crop"
-                        value={newStory.poster}
-                        onChange={(e) => setNewStory({ ...newStory, poster: e.target.value })}
-                      />
-                    </div>
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Compress image to reduce data URL size (like projects)
+                          const canvas = document.createElement('canvas');
+                          const ctx = canvas.getContext('2d');
+                          const img = new Image();
+                          
+                          img.onload = () => {
+                            // Resize to max 400px width while maintaining aspect ratio
+                            const maxWidth = 400;
+                            const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                            canvas.width = img.width * ratio;
+                            canvas.height = img.height * ratio;
+                            
+                            ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            // Convert to data URL with 80% quality to reduce size
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            setNewStory({ ...newStory, imageUrl: dataUrl, poster: dataUrl });
+                          };
+                          
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            img.src = reader.result as string;
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {newStory.poster && (
+                      <img src={newStory.poster} alt="Poster preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    )}
                   </div>
                 </form>
               </div>
@@ -524,7 +757,7 @@ export default function SuccessStoriesPage() {
                   className="proj-add-save-btn"
                   onClick={handleAddStory}
                 >
-                  Add Story
+                  {isEditMode ? 'Update Story' : 'Add Story'}
                 </button>
               </div>
             </div>

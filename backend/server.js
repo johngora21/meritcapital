@@ -19,6 +19,8 @@ app.use(cookieParser());
 app.use(httpLogger);
 
 app.use('/api/v1', router);
+// Serve uploaded files
+app.use('/uploads', express.static('../uploads'));
 app.use(errorHandler);
 
 async function start() {
