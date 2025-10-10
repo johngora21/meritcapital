@@ -27,12 +27,15 @@ export const CratQuestion = sequelize.define('crat_questions', {
 export const CratAnswer = sequelize.define('crat_answers', {
   id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
   assessment_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-  question_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
+  question_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+  section_title: { type: DataTypes.STRING(191), allowNull: true },
+  sub_domain: { type: DataTypes.STRING(191), allowNull: true },
+  question_text: { type: DataTypes.STRING(512), allowNull: true },
   rating: { type: DataTypes.ENUM('yes','maybe','no'), allowNull: true },
   score: { type: DataTypes.TINYINT.UNSIGNED, allowNull: true },
   attachment_name: { type: DataTypes.STRING(255), allowNull: true },
   attachment_url: { type: DataTypes.STRING(512), allowNull: true },
-}, { timestamps: true, createdAt: false, updatedAt: 'updated_at', indexes: [{ unique: true, fields: ['assessment_id','question_id'] }] });
+}, { timestamps: true, createdAt: false, updatedAt: 'updated_at' });
 
 export const CratDomainScore = sequelize.define('crat_domain_scores', {
   id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
@@ -46,10 +49,16 @@ export const CratDomainScore = sequelize.define('crat_domain_scores', {
 CratDomain.hasMany(CratQuestion, { foreignKey: 'domain_id', as: 'questions' });
 CratQuestion.belongsTo(CratDomain, { foreignKey: 'domain_id' });
 
+CratAssessment.hasMany(CratAnswer, { foreignKey: 'assessment_id', as: 'answers' });
+CratAnswer.belongsTo(CratAssessment, { foreignKey: 'assessment_id' });
+
+CratQuestion.hasMany(CratAnswer, { foreignKey: 'question_id', as: 'answers' });
+CratAnswer.belongsTo(CratQuestion, { foreignKey: 'question_id' });
+
+CratAssessment.hasMany(CratDomainScore, { foreignKey: 'assessment_id', as: 'domain_scores' });
+CratDomainScore.belongsTo(CratAssessment, { foreignKey: 'assessment_id' });
+
+CratDomain.hasMany(CratDomainScore, { foreignKey: 'domain_id', as: 'domain_scores' });
+CratDomainScore.belongsTo(CratDomain, { foreignKey: 'domain_id' });
+
 export default { CratAssessment, CratDomain, CratQuestion, CratAnswer, CratDomainScore };
-
-
-
-
-
-
